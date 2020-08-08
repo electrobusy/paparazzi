@@ -28,6 +28,7 @@
 #define GCNET_MAIN_H
 
 #include <time.h>
+#include <stdbool.h> // get "true" and "false" identifiers
 
 // paparazzi-based library
 #include "state.h"
@@ -82,11 +83,12 @@ struct FloatVect3 pos_NWU, vel_NWU;
 // -- network's frame 
 struct FloatVect2 delta_pos_NWU, delta_pos_net; // position
 struct FloatVect2 vel_net; // velocity
+float psi_ref_net;
 
 // declare variables - attitude
 // -- [CHECK]
 struct FloatEulers att_euler_OT2NED = {0.0, 0.0, 0.0};
-struct FloatEulers att_euler_NED2BWU = {0.0, 0.0, 0.0};
+struct FloatEulers att_euler_NED2NWU = {0.0, 0.0, 0.0};
 // -- quaternions
 struct FloatQuat att_quat = {1, 0, 0, 0}; 
 
@@ -95,7 +97,10 @@ struct FloatRMat R_OT_2_NED, R_NED_2_NWU;
 
 // neural network state and control/action: 
 float state_nn[NUM_STATE];
-float action_nn[NUM_CONTROLS];
+float control_nn[NUM_CONTROLS];
+
+// define tolerances: 
+float tol = 0.2;
 
 
 #endif
