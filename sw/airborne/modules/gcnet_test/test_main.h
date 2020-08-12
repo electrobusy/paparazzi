@@ -18,14 +18,14 @@
  * <http://www.gnu.org/licenses/>.
  */
 /**
- * @file "modules/gcnet/gcnet_main.h"
+ * @file "modules/gcnet_test/test_main.h"
  * @author Rohan Chotalal
  * This module includes the implementation and interaction of the G&CNet with the
  * lower-level control loops.  
  */
 
-#ifndef GCNET_MAIN_H
-#define GCNET_MAIN_H
+#ifndef TEST_MAIN_H
+#define TEST_MAIN_H
 
 #include <time.h>
 #include <stdbool.h> // get "true" and "false" identifiers
@@ -35,7 +35,7 @@
 #include "math/pprz_algebra_float.h"
 
 // user-made libraries
-#include "nn_operations.h"
+// #include "nn_operations.h"
 
 // declare math variables
 #ifndef PI
@@ -64,16 +64,8 @@
 #define BEBOP_DRAG_Z 0
 #endif
 
-// neural network state and control/action: 
-float state_nn[NUM_STATES];
-float control_nn[NUM_CONTROLS];
-
-// neural network flag: 
-extern bool nn_flag = false; 
-
 // Module functions (for paparazzi)
 extern void gcnet_init(void);
-extern void gcnet_enter(void);
 extern void gcnet_run(void);
 
 #endif

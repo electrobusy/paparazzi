@@ -9,7 +9,7 @@ Goal: Include header of different functions used to compute neural network opera
 #include <stdio.h>
 #include <math.h> // use tanh and softplus operations 
 
-// #include "nn_parameters.h" // add nn properties and weights
+#include "nn_parameters.h" // add nn properties and weights
 
 void preprocess_input(float* input);
 
