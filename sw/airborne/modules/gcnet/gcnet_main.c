@@ -25,7 +25,7 @@
  */
 
 // Header for this file
-#include "gcnet_main.h"
+#include "modules/gcnet/gcnet_main.h"
 
 // guidance library (already in paparazzi)
 #include "firmwares/rotorcraft/guidance/guidance_v_adapt.h"
@@ -169,29 +169,40 @@ bool gcnet_control(float desired_X, float desired_Y, float desired_Z, float desi
     // -- inner loop controls: rates // for the rates the noise is much less! 
     
     // -- if drone within the final region, then return True and switch to another controller
-    if ((fabs(delta_pos_NWU.x) < tol) && (fabs(delta_pos_NWU.y) < tol) && (fabs(pos_NWU.z - desired_Z) < 0.1))
+    if ((fabs(state_nn[2]) < tol) && (fabs(state_nn[2]) < tol) && (fabs(state_nn[2]) < 0.1))
         return true;
 	else
 		return false;
 }
 
-void acceleration_z_controller(float desired_z)
+void acceleration_z_controller(float desired_az)
 {
-    // define 
+    // define integration error: 
 	static float integrator_error = 0.f;
 	static float previous_error = 0.f;
+
+    // get acceleration: 
 	struct NedCoor_f *accel = stateGetAccelNed_f();
-	update_butterworth_2_low_pass(&accel_ned_filt, accel->z);
-	float filtered_az = (accel_ned_filt.o[0]-GRAVITY_FACTOR)/cosf(stateGetNedToBodyEulers_f()->theta)/cosf(stateGetNedToBodyEulers_f()->phi);
-	float error_az = desired_z - filtered_az;
+	
+    // filter acceleration using a butterworth filter (since this is too noisy): 
+    update_butterworth_2_low_pass(&accel_ned_filt, accel->z);
+	
+    // remove gravity from the filtered acceleration (since IMU): 
+    float filtered_az = (accel_ned_filt.o[0])/cosf(stateGetNedToBodyEulers_f()->theta)/cosf(stateGetNedToBodyEulers_f()->phi);
+	
+    // get the acceleration error:
+    float error_az =  desired_az - filtered_az;
+
+    // cumulative integration error: 
 	error_integrator += error_az / 100.0;
+
 	float thrust_sp = (error_az*thrust_p_gain + error_integrator*thrust_i_gain + thrust_d_gain*(error_az-previous_error)/100.0)*thrust_effectiveness + nominal_throttle;
-	guidance_v_set_guided_th(thrust_sp);
+	
+    // set the desired vertical thrust in the "vertical guidance module":
+    guidance_v_set_guided_th(thrust_sp);
+
+    // set the value of the previous error: 
 	previous_error = error_az;
-	debug_pid_acc.az_error = error_az;
-	debug_pid_acc.az_filtered = filtered_az;
-	debug_pid_acc.thrust_sp = thrust_sp;
-	debug_pid_acc.thrust_nominal = nominal_throttle;
 }
 
 // Module functions

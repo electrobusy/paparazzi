@@ -1,0 +1,15 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="gcnet_test">
+  <doc>
+    <description>
+    This module is used to test by steps the gcnet controller.
+    </description>
+  </doc>
+  <header>
+    <file name="gcnet_main.h"/>
+  </header>
+  <makefile>
+    <file name="gcnet_main.c"/>
+  </makefile>
+</module>

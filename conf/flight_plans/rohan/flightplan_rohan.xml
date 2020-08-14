@@ -1,30 +1,48 @@
 <!DOCTYPE flight_plan SYSTEM "../flight_plan.dtd">
 
-<flight_plan alt="1.0" ground_alt="0" lat0="51.990634" lon0="4.376789" max_dist_from_home="8" name="Bebop avoid orange TU Delft Cyberzoo" security_height="0.4">
+<flight_plan alt="1.0" ground_alt="0" lat0="51.990634" lon0="4.376789" max_dist_from_home="8" name="Bebop gcnet simulation" security_height="0.4">
+  <!-- header -->
   <header>
     #include "subsystems/datalink/datalink.h"
     #include "subsystems/electrical.h"
     #include "subsystems/radio_control.h"
     #include "subsystems/ahrs.h"
-    #define NPS_GAZEBO_WORLD "cyberzoo_orange_poles.world" 
-</header>
+    #define NPS_GAZEBO_WORLD "cyberzoo.world" 
+  </header>
+
+  <!-- waypoints -->
   <waypoints>
+
     <waypoint lat="51.990631" lon="4.376796" name="HOME"/>
+
+    <!-- Waypoints for testing the gcnet -->
+    <waypoint name="Origin" x="0" y="0"/>
+    <waypoint name="WP1" x="-4" y="-4"/>
+    <waypoint name="WP2" x="-4" y="4"/>
+    <waypoint name="WP3" x="4" y="4"/>
+    <waypoint name="WP4" x="4" y="-4"/>
+
+    <!-- Important for the exceptions -->
     <waypoint name="CLIMB" x="1.9" y="1.0"/>
     <waypoint name="STDBY" x="1.9" y="1.0"/>
     <waypoint name="TD" x="0.8" y="-1.7"/>
     <waypoint name="GOAL" x="1.9" y="1.0"/>
     <waypoint name="TRAJECTORY" x="1.9" y="1.0"/>
+
+    <!-- Define the cyberzoo barrier - "flyable" region - see "sectors" -->
     <waypoint lat="51.9905834" lon="4.3767710" name="_CZ1"/>
     <waypoint lat="51.9906465" lon="4.3767025" name="_CZ2"/>
     <waypoint lat="51.9906882" lon="4.376805" name="_CZ3"/>
     <waypoint lat="51.9906238" lon="4.3768729" name="_CZ4"/>
 
+    <!-- Define the obstacle zone - "non-flyable" region see "sectors" -->
     <waypoint lat="51.9905860" lon="4.3767712" name="_OZ1"/>
     <waypoint lat="51.9906456" lon="4.3767088" name="_OZ2"/>
     <waypoint lat="51.9906830" lon="4.3768048" name="_OZ3"/>
     <waypoint lat="51.9906239" lon="4.3768684" name="_OZ4"/>
   </waypoints>
+
+  <!-- sectors -->
   <sectors>
     <sector color="red" name="CyberZoo">
       <corner name="_CZ1"/>
@@ -39,6 +57,7 @@
       <corner name="_OZ4"/>
     </sector>
   </sectors>
+
   <exceptions>
     <!-- RC lost -->
     <!--exception cond="((radio_control.status == RC_REALLY_LOST) &&
@@ -75,6 +94,8 @@
       !(nav_block >= IndexOfBlock('land here')) &&
       (autopilot_in_flight() == true) )" deroute="land here"/>
   </exceptions>
+
+  <!-- Important functions -->
   <blocks>
     <block name="Wait GPS">
       <call_once fun="NavKillThrottle()"/>

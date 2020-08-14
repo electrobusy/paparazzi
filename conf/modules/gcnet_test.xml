@@ -1,0 +1,21 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="gcnet_test">
+  <doc>
+    <description>
+    This module is used to test by steps the gcnet controller.
+    </description>
+  </doc>
+
+  <header>
+    <file name="test_main.h"/>
+  </header>
+
+  <init fun="gcnet_init()"/>
+  <!-- <periodic fun="gcnet_run()" freq = "100"/> -->
+  <event fun="gcnet_run()"/>
+
+  <makefile target="ap|nps">
+    <file name="test_main.c"/>
+  </makefile>
+</module>

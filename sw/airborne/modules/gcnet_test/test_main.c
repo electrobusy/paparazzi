@@ -24,6 +24,9 @@
  * lower-level control loops.  
  */
 
+// standard C libraries
+#include <stdio.h>
+
 // Header for this file
 #include "modules/gcnet_test/test_main.h"
 
@@ -35,8 +38,8 @@
 #include "filters/low_pass_filter.h"
 
 // Settings: 
-#ifndef SL_OF_FILTER_CUTOFF
-#define SL_OF_FILTER_CUTOFF 1.5f
+#ifndef NN_FILTER_CUTOFF
+#define NN_FILTER_CUTOFF 1.5f
 #endif
 
 // ----
@@ -49,6 +52,7 @@ struct FloatVect3 pos_NED, vel_NED;
 struct FloatVect3 pos_NWU, vel_NWU;
 // -- Extra variables: 
 struct FloatVect3 hoverPos;
+struct FloatEulers hoverEuler;
 
 // declare variables - attitude
 // -- [CHECK]
@@ -59,7 +63,9 @@ struct FloatQuat att_quat = {1, 0, 0, 0};
 
 // declare variables - transformation matrices
 struct FloatRMat R_OT_2_NED, R_NED_2_NWU;
-// ----
+
+// declare filtering variables
+Butterworth2LowPass accel_ned_filt;
 
 /*
 Function: Hovering quadrotor (in this case, using information from optitrack) -- initialize
@@ -79,7 +85,7 @@ static void hovering_quad_init(void) // (float hover_time)
 
     // check if enters in this module
     printf("Hover is initialized! \n");
-    printf("We are inside the module: let us start hovering! \n")
+    printf("We are inside the module: let us start hovering! \n");
 
     // define filtering parameters and initialize filter
     float ts = 1.f / PERIODIC_FREQUENCY;
@@ -91,15 +97,16 @@ static void hovering_quad_init(void) // (float hover_time)
 Function: Hovering quadrotor (in this case, using information from optitrack) -- constantly running
 */
 static void hovering_quad_run(void)
-
+{
+    // [CHECK THIS TOO]
     att_euler_OT2NED.phi = stateGetNedToBodyEulers_f()->phi;
     att_euler_OT2NED.theta = stateGetNedToBodyEulers_f()->theta;
     att_euler_OT2NED.psi = stateGetNedToBodyEulers_f()->psi;
 
     // [CHECK THIS]
-    att_euler_NWU.phi = -stateGetNedToBodyEulers_f()->phi;
-    att_euler_NWU.theta = stateGetNedToBodyEulers_f()->theta;
-    att_euler_NWU.psi = -stateGetNedToBodyEulers_f()->psi;
+    att_euler_NED2NWU.phi = -stateGetNedToBodyEulers_f()->phi;
+    att_euler_NED2NWU.theta = stateGetNedToBodyEulers_f()->theta;
+    att_euler_NED2NWU.psi = -stateGetNedToBodyEulers_f()->psi;
 
     // -- calculate rotational matrices (in euler angles)
     float_rmat_of_eulers_321(&R_OT_2_NED, &att_euler_OT2NED); 
@@ -123,18 +130,21 @@ static void hovering_quad_run(void)
     float_rmat_transp_vmult(&vel_NWU, &R_NED_2_NWU, &vel_NED);
    
     // -- get quad's acceleration in the Z axis: 
-    struct NedCoor_f *accel = stateGetAccelNed_f()
+    struct NedCoor_f *accel = stateGetAccelNed_f();
 
     // -- filter it, since it is usually noisy (wether it is from optitrack or IMU)
     update_butterworth_2_low_pass(&accel_ned_filt, accel->z);
 
     // -- remove gravity 
-    float filtered_az = (accel_ned_filt.o[0]-GRAVITY_FACTOR)/cosf(stateGetNedToBodyEulers_f()->theta);
-    debug_pid_acc.az_filtered = filtered_az;
+    float filtered_az = (accel_ned_filt.o[0] - GRAVITY_ACC)/cosf(stateGetNedToBodyEulers_f()->theta);
    
-    guidance_h_set_guided_pos(0.0, 0.0); 
-    guidance_v_set_guided_z(-1.5);
-    guidance_h_set_guided_heading(0.0);
+    guidance_h_set_guided_pos(0.0, 0.0); // position (x,y) = (0,0)
+    guidance_v_set_guided_z(-5); // position z = 5 m
+    guidance_h_set_guided_heading(0.0); // psi = 0
+
+    // printf('az = %f\n', filtered_az);
+
+    // printf("Event started \n");
 }
 
 // Module functions
@@ -142,4 +152,4 @@ static void hovering_quad_run(void)
 void gcnet_init() { hovering_quad_init(); }
 
 // Run
-void gcnet_event() { hovering_quad_run(); }
+void gcnet_run() { hovering_quad_run(); }
