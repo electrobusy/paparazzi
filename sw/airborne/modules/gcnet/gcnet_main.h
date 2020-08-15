@@ -51,29 +51,19 @@
 #define BEBOP_MASS 0.38905 
 #endif
 
-#ifndef BEBOP_DRAG_X
-#define BEBOP_DRAG_X -0.5
-#endif
-
-#ifndef BEBOP_DRAG_Y
-#define BEBOP_DRAG_Y -0.5
-#endif
-
-// For the dataset generation to train G&CNet, we considered beta_z = 0
-#ifndef BEBOP_DRAG_Z
-#define BEBOP_DRAG_Z 0
-#endif
-
 // neural network state and control/action: 
-float state_nn[NUM_STATES];
-float control_nn[NUM_CONTROLS];
+extern float state_nn[NUM_STATES];
+extern float control_nn[NUM_CONTROLS];
 
 // neural network flag: 
-extern bool nn_flag = false; 
+// extern bool nn_flag = false; 
 
-// Module functions (for paparazzi)
-extern void gcnet_init(void);
-extern void gcnet_enter(void);
-extern void gcnet_run(void);
+#define GUIDANCE_H_MODE_MODULE_SETTING GUIDANCE_H_MODE_MODULE
+
+// Guidance module function: 
+extern void guidance_h_module_init(void);
+extern void guidance_h_module_enter(void);
+extern void guidance_h_module_read_rc(void);
+extern void guidance_h_module_run(bool in_flight);
 
 #endif
