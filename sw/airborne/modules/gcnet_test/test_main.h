@@ -34,38 +34,18 @@
 #include "state.h"
 #include "math/pprz_algebra_float.h"
 
-// user-made libraries
-// #include "nn_operations.h"
+// The module functions
+extern void hovering_quad_init(void);
 
-// declare math variables
-#ifndef PI
-#define PI 3.14159
-#endif
+// Horizontal guidance module functions (inside paparazzi)
+extern void guidance_h_module_init(void);
+extern void guidance_h_module_enter(void);
+extern void guidance_h_module_read_rc(void);
+extern void guidance_h_module_run(bool in_flight);
 
-// declare environment and drone parameters
-#ifndef GRAVITY_ACC
-#define GRAVITY_ACC 9.81
-#endif
-
-#ifndef BEBOP_MASS 
-#define BEBOP_MASS 0.38905 
-#endif
-
-#ifndef BEBOP_DRAG_X
-#define BEBOP_DRAG_X -0.5
-#endif
-
-#ifndef BEBOP_DRAG_Y
-#define BEBOP_DRAG_Y -0.5
-#endif
-
-// For the dataset generation to train G&CNet, we considered beta_z = 0
-#ifndef BEBOP_DRAG_Z
-#define BEBOP_DRAG_Z 0
-#endif
-
-// Module functions (for paparazzi)
-extern void gcnet_init(void);
-extern void gcnet_run(void);
+// Vertical guidance module functions (inside paparazzi)
+extern void guidance_v_module_init(void);
+extern void guidance_v_module_enter(void);
+extern void guidance_v_module_run(bool in_flight);
 
 #endif
