@@ -74,8 +74,10 @@ void guidance_h_module_run(bool in_flight)
 {
   // YOUR NEW HORIZONTAL OUTERLOOP CONTROLLER GOES HERE
   // ctrl.cmd = CallMyNewHorizontalOuterloopControl(ctrl);
-  float roll = 0.0;
+  float roll = 0.2;
   float pitch = 0.0;
+
+  // integrate rates to get attitude and set those in the ctrl_cmd variable:
 
   ctrl.cmd.phi = ANGLE_BFP_OF_REAL(roll);
   ctrl.cmd.theta = ANGLE_BFP_OF_REAL(pitch);
@@ -86,3 +88,18 @@ void guidance_h_module_run(bool in_flight)
   // Alternatively, use the indi_guidance and send AbiMsgACCEL_SP to it instead of setting pitch and roll
 }
 
+void guidance_v_module_init(void)
+{
+  // initialization of your custom vertical controller goes here
+}
+
+// Implement own Vertical loops
+void guidance_v_module_enter(void)
+{
+  // your code that should be executed when entering this vertical mode goes here
+}
+
+void guidance_v_module_run(UNUSED bool in_flight)
+{
+  // your vertical controller goes here
+}

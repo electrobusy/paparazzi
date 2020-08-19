@@ -11,7 +11,7 @@
     <file name="test_main.h"/>
   </header>
 
-  <init fun="hovering_quad_init()"/>
+  <!-- <init fun="hovering_quad_init()"/> --> 
   <!-- <periodic fun="hovering_quad_run()" freq = "100"/> -->
   <!-- <event fun="hovering_quad_run()"/> --> 
 

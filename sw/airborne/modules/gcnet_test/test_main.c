@@ -32,16 +32,16 @@
 
 // guidance libraries (already in paparazzi) 
 #include "firmwares/rotorcraft/guidance/guidance_v.h" // access functions for vertical guidance
-#include "firmwares/rotorcraft/guidance/guidance_h.h" // access functions for horizontal guidance
+// #include "firmwares/rotorcraft/guidance/guidance_h.h" // access functions for horizontal guidance
 
-#define GUIDANCE_H_MODE_MODULE_SETTING GUIDANCE_H_MODE_MODULE
+// #define GUIDANCE_H_MODE_MODULE_SETTING GUIDANCE_H_MODE_HOVER
 // #define GUIDANCE_H_MODE_MODULE_SETTING GUIDANCE_H_MODE_NAV
 
-#define GUIDANCE_V_MODE_MODULE_SETTING GUIDANCE_V_MODE_MODULE
+#define GUIDANCE_V_MODE_MODULE_SETTING GUIDANCE_V_GUIDED_MODE_ZHOLD
 //#define GUIDANCE_V_MODE_MODULE_SETTING GUIDANCE_V_MODE_NAV
 
 // Function definition: 
-void hovering_quad_run(bool in_flight);
+void hovering_quad_init(void);
 
 /*
 Function: Hovering quadrotor (in this case, using information from optitrack) -- initialize
@@ -57,6 +57,7 @@ void hovering_quad_init(void) // (float hover_time)
  * hovering_quad_run
  * @param[in] in_flight - Whether we are in flight or not
  */
+/* 
 void hovering_quad_run(bool in_flight)
 {
     if (in_flight)
@@ -65,6 +66,7 @@ void hovering_quad_run(bool in_flight)
         guidance_h_set_guided_heading(0.0); // psi = 0
     }
 }
+*/
 
 /** -----
  * HORIZONTAL GUIDANCE MODE 
@@ -73,32 +75,32 @@ void hovering_quad_run(bool in_flight)
 /**
  * Initialization of horizontal guidance module.
  */
-void guidance_h_module_init(void)
-{
-    hovering_quad_init();
-}
+// void guidance_h_module_init(void)
+// {
+//     hovering_quad_init();
+// }
 
 /**
  * Horizontal guidance mode entered
  */
-void guidance_h_module_enter(void) 
-{
-    printf("Entered module!\n");
-}
+// void guidance_h_module_enter(void) 
+// {
+//     printf("Entered module!\n");
+// }
 
 /**
  * Read the RC commands
  */
-void guidance_h_module_read_rc(void) {}
+// void guidance_h_module_read_rc(void) {}
 
 /**
  * Main guidance loop
  * @param[in] in_flight - Whether we are in flight or not
  */
-void guidance_h_module_run(bool in_flight)
-{
-    hovering_quad_run(in_flight);
-}
+// void guidance_h_module_run(bool in_flight)
+// {
+//     hovering_quad_run(in_flight);
+// }
 
 /** -----
  * VERTICAL GUIDANCE MODE 
@@ -129,6 +131,6 @@ void guidance_v_module_run(bool in_flight)
 {
     if (in_flight)
     {
-        guidance_v_set_guided_z(-5); // position z = 5 m
+        guidance_v_set_guided_z(3); // position z = 3 m
     }
 }

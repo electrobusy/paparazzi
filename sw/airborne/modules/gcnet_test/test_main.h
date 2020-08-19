@@ -34,14 +34,13 @@
 #include "state.h"
 #include "math/pprz_algebra_float.h"
 
-// The module functions
-extern void hovering_quad_init(void);
-
 // Horizontal guidance module functions (inside paparazzi)
+/*
 extern void guidance_h_module_init(void);
 extern void guidance_h_module_enter(void);
 extern void guidance_h_module_read_rc(void);
 extern void guidance_h_module_run(bool in_flight);
+*/ 
 
 // Vertical guidance module functions (inside paparazzi)
 extern void guidance_v_module_init(void);
