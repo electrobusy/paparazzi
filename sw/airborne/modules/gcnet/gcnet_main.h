@@ -21,7 +21,7 @@
  * @file "modules/gcnet/gcnet_main.h"
  * @author Rohan Chotalal
  * This module includes the implementation and interaction of the G&CNet with the
- * lower-level control loops.  
+ * lower-level control loops.  Based in the "ctrl_module_outerloop_demo" files.
  */
 
 #ifndef GCNET_MAIN_H
@@ -34,8 +34,11 @@
 #include "state.h"
 #include "math/pprz_algebra_float.h"
 
-// user-made libraries
+// user-made libraries with:
+// -- functions for nn operations
 #include "nn_operations.h"
+// -- variables with nn parameters (weights, biases and other information about the nets)
+#include "nn_parameters.h"
 
 // declare math variables
 #ifndef PI
@@ -55,15 +58,21 @@
 extern float state_nn[NUM_STATES];
 extern float control_nn[NUM_CONTROLS];
 
-// neural network flag: 
-// extern bool nn_flag = false; 
-
+// Set the both "guidance_h" and "guidance_v" modules using the "module" mode
+// NOTE: Therefore, it automatically uses the guidance_*_module functions implemented here 
 #define GUIDANCE_H_MODE_MODULE_SETTING GUIDANCE_H_MODE_MODULE
 
-// Guidance module function: 
+#define GUIDANCE_V_MODE_MODULE_SETTING GUIDANCE_V_MODE_MODULE
+
+// Implement own Horizontal loops: 
 extern void guidance_h_module_init(void);
 extern void guidance_h_module_enter(void);
 extern void guidance_h_module_read_rc(void);
 extern void guidance_h_module_run(bool in_flight);
+
+// Implement own Vertical loops - even though we don't use them 
+extern void guidance_v_module_init(void);
+extern void guidance_v_module_enter(void);
+extern void guidance_v_module_run(bool in_flight);
 
 #endif

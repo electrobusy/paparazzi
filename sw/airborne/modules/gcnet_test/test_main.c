@@ -132,3 +132,37 @@ void guidance_v_module_run(bool in_flight)
         guidance_v_set_guided_z(-5); // position z = 5 m
     }
 }
+
+// ---------- 
+// FOR LATER
+/* 
+void acceleration_z_controller(float desired_az)
+{
+    // define integration error: 
+	static float integrator_error = 0.f;
+	static float previous_error = 0.f;
+
+    // get acceleration: 
+	struct NedCoor_f *accel = stateGetAccelNed_f();
+	
+    // filter acceleration using a butterworth filter (since this is too noisy): 
+    update_butterworth_2_low_pass(&accel_ned_filt, accel->z);
+	
+    // remove gravity from the filtered acceleration (since IMU): 
+    float filtered_az = (accel_ned_filt.o[0])/cosf(stateGetNedToBodyEulers_f()->theta)/cosf(stateGetNedToBodyEulers_f()->phi);
+	
+    // get the acceleration error:
+    float error_az =  desired_az - filtered_az;
+
+    // cumulative integration error: 
+	error_integrator += error_az / 100.0;
+
+	float thrust_sp = (error_az*thrust_p_gain + error_integrator*thrust_i_gain + thrust_d_gain*(error_az-previous_error)/100.0)*thrust_effectiveness + nominal_throttle;
+	
+    // set the desired vertical thrust in the "vertical guidance module":
+    guidance_v_set_guided_th(thrust_sp);
+
+    // set the value of the previous error: 
+	previous_error = error_az;
+}
+*/

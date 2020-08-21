@@ -86,7 +86,9 @@ void guidance_h_module_run(bool in_flight)
   // Alternatively, use the indi_guidance and send AbiMsgACCEL_SP to it instead of setting pitch and roll
 }
 
-// Vertical loops: 
+////////////////////////////////////////////////////////////////////
+// Call our controller
+// Implement own vertical loops
 void guidance_v_module_init(void)
 {
   // initialization of your custom vertical controller goes here

@@ -21,7 +21,7 @@
  * @file "modules/gcnet/gcnet_main.c"
  * @author Rohan Chotalal
  * This module includes the implementation and interaction of the G&CNet with the
- * lower-level control loops.  
+ * lower-level control loops. Based in the "ctrl_module_outerloop_demo" files.
  */
 
 // Header for this file
@@ -63,9 +63,6 @@ struct FloatQuat att_quat = {1, 0, 0, 0};
 // declare variables - transformation matrices
 struct FloatRMat R_OT_2_NED, R_NED_2_NWU;
 
-// Initialize variables for thrust low-pass filter: 
-static Butterworth2LowPass thrust_filt;
-
 // define tolerances: 
 float tol = 0.2;
 
@@ -77,7 +74,7 @@ float desired_psi = 0;
 
 // Neural Network State and Controls
 float state_nn[NUM_STATES];
-extern float control_nn[NUM_CONTROLS];
+float control_nn[NUM_CONTROLS];
 
 /*
 Function: Compute the time difference
@@ -85,20 +82,6 @@ Function: Compute the time difference
 float timedifference_msec(struct timeval t_t0, struct timeval t_t1)
 {
 	return (t_t1.tv_sec - t_t0.tv_sec) * 1000.0f + (t_t1.tv_usec - t_t0.tv_usec) / 1000.0f;
-}
-
-// Module initialization function
-static void gcnet_init()
-{
-	// print neural network information 
-	// [TODO]
-
-	// start the drone by hovering using a PID
-
-	// Init low-pass filters for thrust
-	float tau = 1.0f / (2.0f * M_PI * NN_OF_FILTER_CUTOFF);
-	float ts = 1.0f / PERIODIC_FREQUENCY;
-	init_butterworth_2_low_pass(&thrust_filt, tau, ts, 0.0f);
 }
 
 // gcnet_control function: 
@@ -170,53 +153,28 @@ bool gcnet_control(bool in_flight)
 	control_nn[0] = control_nn[0] + BEBOP_MASS*GRAVITY_ACC; // to stay between 0 and 2*m*g 
 }
 
-/* 
-void acceleration_z_controller(float desired_az)
-{
-    // define integration error: 
-	static float integrator_error = 0.f;
-	static float previous_error = 0.f;
+/**
+ * Implement own horizontal loop functions 
+ * NOTE: In this case, the thrust output of the network is used 
+ */
 
-    // get acceleration: 
-	struct NedCoor_f *accel = stateGetAccelNed_f();
-	
-    // filter acceleration using a butterworth filter (since this is too noisy): 
-    update_butterworth_2_low_pass(&accel_ned_filt, accel->z);
-	
-    // remove gravity from the filtered acceleration (since IMU): 
-    float filtered_az = (accel_ned_filt.o[0])/cosf(stateGetNedToBodyEulers_f()->theta)/cosf(stateGetNedToBodyEulers_f()->phi);
-	
-    // get the acceleration error:
-    float error_az =  desired_az - filtered_az;
-
-    // cumulative integration error: 
-	error_integrator += error_az / 100.0;
-
-	float thrust_sp = (error_az*thrust_p_gain + error_integrator*thrust_i_gain + thrust_d_gain*(error_az-previous_error)/100.0)*thrust_effectiveness + nominal_throttle;
-	
-    // set the desired vertical thrust in the "vertical guidance module":
-    guidance_v_set_guided_th(thrust_sp);
-
-    // set the value of the previous error: 
-	previous_error = error_az;
-}
-*/
-
-/* --- Guidance module functions --- */ 
 // Start horizontal controller
 void guidance_h_module_init(void)
-{
-  printf("Init module!\n"); 
+{ 
+
 }
 
 // Enter in the guidance_h module
 void guidance_h_module_enter(void)
 {
-	printf("Enter module!\n");
+	stabilization_indi_set_rpy_setpoint_i()
 }
 
-// Read the RC values - not needed  
-void guidance_h_module_read_rc(void) {}
+// Read the RC values 
+void guidance_h_module_read_rc(void)
+{
+
+}
 
 // Run the horizontal controller
 void guidance_h_module_run(bool in_flight)
@@ -232,21 +190,38 @@ void guidance_h_module_run(bool in_flight)
     gcnet_control(in_flight);
 
 		// -- inner loop controls: thrust 
-		stabilization_cmd[COMMAND_THRUST] = control_nn[0]; // this won't work! it should be integer!?
+		stabilization_cmd[COMMAND_THRUST] = control_nn[0];
 		
 		// Shuo's approach -- use the guidance_v module: -- CODE THIS
 
 		// -- inner loop controls: rates // for the rates the noise is much less! 
-		stabilization_cmd[COMMAND_ROLL] = control_nn[1]; // this won't work! it should be integer!?
-		stabilization_cmd[COMMAND_PITCH] = control_nn[2]; // this won't work! it should be integer!?
-		stabilization_cmd[COMMAND_YAW] = control_nn[3]; // this won't work! it should be integer!?
+		stabilization_cmd[COMMAND_ROLL] = RATE_BFP_OF_REAL(control_nn[1]); 
+		stabilization_cmd[COMMAND_PITCH] = RATE_BFP_OF_REAL(control_nn[2]); 
+		stabilization_cmd[COMMAND_YAW] = RATE_BFP_OF_REAL(control_nn[3]); 
 		
 		// -- if drone within the final region, then return True and switch to another controller
 		if ((fabs(state_nn[0]) < tol) && (fabs(state_nn[1]) < tol) && (fabs(state_nn[2]) < 0.1))
-			// return true;
-			print("I am inside the region!\n");
-		// else
-			// return false;
-    stabilization_rate_run(in_flight);
+			autopilot_static_set_mode(AP_MODE_NAV);
   }
+}
+
+/**
+ * Implement own vertical loop functions 
+ * NOTE: In this case we do not do that, but we leave these functions here
+ * to allow vertical guidance using the neural network. 
+ */
+
+void guidance_v_module_init(void)
+{
+  // initialization of your custom vertical controller goes here
+}
+
+void guidance_v_module_enter(void)
+{
+  // your code that should be executed when entering this vertical mode goes here
+}
+
+void guidance_v_module_run(UNUSED bool in_flight)
+{
+  // your vertical controller goes here
 }

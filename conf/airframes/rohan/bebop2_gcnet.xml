@@ -11,21 +11,17 @@
 
     <!-- Autopilot -->
     <target name="ap" board="bebop2">
-      <module name="stabilization" type="indi_simple"/>
-      <!-- These two were on Shuo's code 
-      <define name="HARD_FLOAT"/>
-      <define name="OPT" value="1"/>
-      --> 
+      <module name="stabilization" type="indi_simple"/> 
       <define name="USE_SONAR" value="FALSE"/>
       <define name="FILE_LOGGER_PATH" value="/data/ftp/internal_000"/>
     </target>
 
     <!-- Simulation -->
     <target name="nps" board="pc">
+      <module name="stabilization" type="indi_simple"/> 
       <module name="fdm" type="gazebo"/>
       <!-- <module name="udp"/> --> 
       <define name="FILE_LOGGER_PATH" value="/tmp/paparazzi"/>
-      <module name="stabilization" type="indi_simple"/>
     </target>
 
     <!-- Subsystem section -->
@@ -35,7 +31,6 @@
     <module name="actuators" type="bebop"/>
     <module name="imu" type="bebop"/>
     <module name="gps" type="datalink"/>
-    <!-- <module name="stabilization" type="indi_simple"/> -->
     <module name="ahrs" type="int_cmpl_quat">
       <configure name="USE_MAGNETOMETER" value="FALSE"/>
       <define name="AHRS_USE_GPS_HEADING" value="TRUE"/>
@@ -52,7 +47,8 @@
     <!-- Paparazzi modules we want to use -->
     <module name="sys_mon"/> <!-- This module handles the CPU load, processing time, etc -->
     <!-- <module name="loggers"/> --> <!-- handle the loggers -->
-    <module name="gcnet_test"/> <!-- Try the gcnet file -->
+    <!-- <module name="gcnet_test"/> --> <!-- Try the gcnet file -->
+    <module name="ctrl_module_outerloop_demo"/>
   
   </firmware>
   
@@ -248,8 +244,8 @@
   <section name="AUTOPILOT">
     <define name="MODE_STARTUP" value="AP_MODE_NAV"/>
     <define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT"/>
-    <define name="MODE_AUTO1" value="AP_MODE_ATTITUDE_Z_HOLD"/>
-    <define name="MODE_AUTO2" value="AP_MODE_NAV"/>
+    <define name="MODE_AUTO1" value="AP_MODE_HOVER_Z_HOLD"/>
+    <define name="MODE_AUTO2" value="AP_MODE_MODULE"/>
     <define name="NO_RC_THRUST_LIMIT" value="TRUE"/>
   </section>
 
