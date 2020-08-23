@@ -27,8 +27,54 @@
 // Header for this file
 #include "modules/gcnet/gcnet_main.h"
 
-// get filters 
-#include "filters/low_pass_filter.h"
+// paparazzi-based libraries
+#include "math/pprz_algebra_float.h"
+
+#include "state.h"
+#include "autopilot.h"
+
+#include "subsystems/radio_control.h"
+#include "subsystems/electrical.h"
+
+#include "filters/low_pass_filter.h" // filters
+
+#include "firmwares/rotorcraft/stabilization.h"
+#include "firmwares/rotorcraft/stabilization/stabilization_attitude.h"
+#include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
+
+// standard libraries 
+#include <time.h>
+#include <stdbool.h> // get "true" and "false" identifiers
+
+// user-made libraries with:
+// -- functions for nn operations
+#include "modules/gcnet/nn_operations.h"
+// -- variables with nn parameters (weights, biases and other information about the nets)
+// #include "modules/gcnet/nn_parameters.h" // -- already in "nn_operations.h"
+
+// declare math parameter
+#ifndef PI
+#define PI 3.1415
+#endif
+
+// declare environment and drone parameters
+#ifndef GRAVITY_ACC
+#define GRAVITY_ACC 9.81
+#endif
+
+#ifndef BEBOP_MASS 
+#define BEBOP_MASS 0.38905 
+#endif
+
+// neural network state and control/action: 
+float state_nn[NUM_STATES];
+float control_nn[NUM_CONTROLS];
+
+/* ---
+Declare functions from this file
+--- */
+float timedifference_msec(struct timeval t_t0, struct timeval t_t1); 
+void gcnet_control(bool in_flight);	
 
 /* --- 
 Declare important variables: 
@@ -54,9 +100,9 @@ struct FloatVect2 vel_net; // velocity
 float psi_ref_net;
 
 // declare variables - attitude
-// -- [CHECK]
+// -- angles used for conversion
 struct FloatEulers att_euler_OT2NED = {0.0, 0.0, 0.0};
-struct FloatEulers att_euler_NED2NWU = {0.0, 0.0, 0.0};
+struct FloatEulers att_euler_NED2NWU = {PI, 0.0, 0.0};
 // -- quaternions
 struct FloatQuat att_quat = {1, 0, 0, 0}; 
 
@@ -64,9 +110,9 @@ struct FloatQuat att_quat = {1, 0, 0, 0};
 struct FloatRMat R_OT_2_NED, R_NED_2_NWU;
 
 // define tolerances: 
-float tol = 0.2;
+float tol = 0.3;
 
-// desired position and yaw angle: 
+// desired position and yaw angle [-- make sure that this can be set up from the flight plan]
 float desired_X = 5;
 float desired_Y = 0; 
 float desired_Z = 0; 
@@ -76,6 +122,23 @@ float desired_psi = 0;
 float state_nn[NUM_STATES];
 float control_nn[NUM_CONTROLS];
 
+// -- quaternion control setpoints -t this is used because the INDI rate interface PR is not done
+struct FloatQuat quat_ctrl_sp;
+struct FloatEulers euler_ctrl_sp;
+struct FloatRates omega_sp;
+
+// control inputs (from receiver and own commands): 
+struct ctrl_struct {
+	// RC Inputs
+  struct Int32Eulers rc_sp;
+
+	// Output commanded attitude
+  struct Int32Eulers cmd;
+
+	// thrust pct
+	int32_t thrust_pct; 
+} ctrl;
+
 /*
 Function: Compute the time difference
 */
@@ -84,8 +147,10 @@ float timedifference_msec(struct timeval t_t0, struct timeval t_t1)
 	return (t_t1.tv_sec - t_t0.tv_sec) * 1000.0f + (t_t1.tv_usec - t_t0.tv_usec) / 1000.0f;
 }
 
-// gcnet_control function: 
-bool gcnet_control(bool in_flight)
+/*
+Function: Guidance and Control Network function
+*/ 
+void gcnet_control(UNUSED bool in_flight)
 {
 	// -- calculate rotational matrices (in euler angles)
 	float_rmat_of_eulers_321(&R_OT_2_NED, &att_euler_OT2NED); 
@@ -150,12 +215,12 @@ bool gcnet_control(bool in_flight)
 	nn_process_time = timedifference_msec(t0, t1);
 
 	// -- Since thrust is within the interval [-m*g, m*g], we have to sum m*g
-	control_nn[0] = control_nn[0] + BEBOP_MASS*GRAVITY_ACC; // to stay between 0 and 2*m*g 
+	// control_nn[0] = control_nn[0] + BEBOP_MASS*GRAVITY_ACC; // to stay between 0 and 2*m*g 
 }
 
 /**
  * Implement own horizontal loop functions 
- * NOTE: In this case, the thrust output of the network is used 
+ * NOTE: In this case, the thrust output of the network is also computed here 
  */
 
 // Start horizontal controller
@@ -167,42 +232,92 @@ void guidance_h_module_init(void)
 // Enter in the guidance_h module
 void guidance_h_module_enter(void)
 {
-	stabilization_indi_set_rpy_setpoint_i()
+	// start quaternion control set-points to zero: 
+	quat_ctrl_sp.qi = 1;
+	quat_ctrl_sp.qx = 0;
+	quat_ctrl_sp.qy = 0;
+	quat_ctrl_sp.qz = 0; 
+
+	// get the euler set-points and initialize them too: 
+	float_eulers_of_quat(&euler_ctrl_sp, &quat_ctrl_sp);
+
+	// Convert RC to setpoint
+  stabilization_attitude_read_rc_setpoint_eulers(&ctrl.rc_sp, autopilot.in_flight, false, false);
 }
 
 // Read the RC values 
 void guidance_h_module_read_rc(void)
 {
-
+	stabilization_attitude_read_rc_setpoint_eulers(&ctrl.rc_sp, autopilot.in_flight, false, false);
 }
 
 // Run the horizontal controller
 void guidance_h_module_run(bool in_flight)
 {
 	// in case of low batery, keep the drone in the NAV mode and hover
-  if (electrical.bat_low) 
+  /* if (electrical.bat_low) 
 	{
     autopilot_static_set_mode(AP_MODE_NAV);
   } 
   else 
-	{
-		// [TODO -- add an if statement that lets us choose between hover and nn control mode]
+	{*/ 
+		// 1 -- start nn controller
     gcnet_control(in_flight);
-
-		// -- inner loop controls: thrust 
-		stabilization_cmd[COMMAND_THRUST] = control_nn[0];
 		
-		// Shuo's approach -- use the guidance_v module: -- CODE THIS
+		// 2 -- propagate inner loop control: body thrust 
+		// -- simulated thrust percentage: 
+		ctrl.thrust_pct = control_nn[0]/(BEBOP_MASS*GRAVITY_ACC);
+		// -- real hovering thrust percentage is not at 0.5, therefore we need an adjustment 
+		if (ctrl.thrust_pct >= 0) // above m*g (if we consider interval [0, 2*m*g])
+		{
+			ctrl.thrust_pct = GUIDANCE_V_NOMINAL_HOVER_THROTTLE + (1 - GUIDANCE_V_NOMINAL_HOVER_THROTTLE)/(0.5 - 0)*ctrl.thrust_pct;
+		}
+		else // below m*g (if we consider interval [0, 2*m*g])
+		{
+			ctrl.thrust_pct = (GUIDANCE_V_NOMINAL_HOVER_THROTTLE - 0)/(0.5 - 0)*ctrl.thrust_pct;
+		}		
+		
+		int32_t thrust_int = ctrl.thrust_pct * MAX_PPRZ; // see how to transform this! 
 
-		// -- inner loop controls: rates // for the rates the noise is much less! 
+		// bound thrust:
+  	Bound(thrust_int, 0, MAX_PPRZ);
+
+		stabilization_cmd[COMMAND_THRUST] = thrust_int;
+
+		// 2 -- inner loop controls: rates --> for the rates the noise is much less! 
+		/* 
 		stabilization_cmd[COMMAND_ROLL] = RATE_BFP_OF_REAL(control_nn[1]); 
 		stabilization_cmd[COMMAND_PITCH] = RATE_BFP_OF_REAL(control_nn[2]); 
 		stabilization_cmd[COMMAND_YAW] = RATE_BFP_OF_REAL(control_nn[3]); 
+		*/
+		// 3 -- Let's use attitude INDI controller instead of integrating the rates 
+		// to obtain desired attitude (because the INDI rate PR is not done yet):
+		// 3.1 -- Get desired rates: 
+		omega_sp.p = control_nn[1];
+		omega_sp.q = control_nn[2];
+		omega_sp.r = control_nn[3];
+
+		// 3.2 -- Get desired attitude by integrating the rates:  
+		float_quat_integrate(&quat_ctrl_sp, &omega_sp, 1/PERIODIC_FREQUENCY);
+		
+		// 3.3 -- Convert desired attitude in quaternions to Euler: 
+		float_eulers_of_quat(&euler_ctrl_sp, &quat_ctrl_sp);
+
+		// 3.4 -- Conversion to int32_t: 
+		ctrl.cmd.phi = ANGLE_BFP_OF_REAL(euler_ctrl_sp.phi);
+		ctrl.cmd.theta = ANGLE_BFP_OF_REAL(euler_ctrl_sp.theta);
+		ctrl.cmd.psi = ANGLE_BFP_OF_REAL(euler_ctrl_sp.psi);
+
+		// 4 -- Set attitude setpoint and run the stabilization command: 
+		stabilization_attitude_set_rpy_setpoint_i(&(ctrl.cmd));
+  	stabilization_attitude_run(in_flight);
 		
 		// -- if drone within the final region, then return True and switch to another controller
+		/* 
 		if ((fabs(state_nn[0]) < tol) && (fabs(state_nn[1]) < tol) && (fabs(state_nn[2]) < 0.1))
-			autopilot_static_set_mode(AP_MODE_NAV);
-  }
+			autopilot_static_set_mode(AP_MODE_HOVER_Z_HOLD);
+		*/ 
+  // }
 }
 
 /**

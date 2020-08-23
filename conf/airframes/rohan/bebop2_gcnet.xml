@@ -47,8 +47,8 @@
     <!-- Paparazzi modules we want to use -->
     <module name="sys_mon"/> <!-- This module handles the CPU load, processing time, etc -->
     <!-- <module name="loggers"/> --> <!-- handle the loggers -->
-    <!-- <module name="gcnet_test"/> --> <!-- Try the gcnet file -->
-    <module name="ctrl_module_outerloop_demo"/>
+    <module name="gcnet"/> <!-- Try the gcnet file -->
+    <!-- <module name="ctrl_module_outerloop_demo"/> --> 
   
   </firmware>
   

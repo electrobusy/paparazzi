@@ -27,36 +27,8 @@
 #ifndef GCNET_MAIN_H
 #define GCNET_MAIN_H
 
-#include <time.h>
-#include <stdbool.h> // get "true" and "false" identifiers
-
-// paparazzi-based library
-#include "state.h"
-#include "math/pprz_algebra_float.h"
-
-// user-made libraries with:
-// -- functions for nn operations
-#include "nn_operations.h"
-// -- variables with nn parameters (weights, biases and other information about the nets)
-#include "nn_parameters.h"
-
-// declare math variables
-#ifndef PI
-#define PI 3.14159
-#endif
-
-// declare environment and drone parameters
-#ifndef GRAVITY_ACC
-#define GRAVITY_ACC 9.81
-#endif
-
-#ifndef BEBOP_MASS 
-#define BEBOP_MASS 0.38905 
-#endif
-
-// neural network state and control/action: 
-extern float state_nn[NUM_STATES];
-extern float control_nn[NUM_CONTROLS];
+// paparazzi library with standard definitions
+#include "std.h" 
 
 // Set the both "guidance_h" and "guidance_v" modules using the "module" mode
 // NOTE: Therefore, it automatically uses the guidance_*_module functions implemented here 
