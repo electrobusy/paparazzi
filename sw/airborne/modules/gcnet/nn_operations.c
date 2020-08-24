@@ -3,14 +3,14 @@
 /*
 Function: Pre-process inputs (normalization layer)
 */
-void preprocess_input(float* input)
+void preprocess_input(float* input, float* input_norm)
 {   
     int idx;
 
     for(idx = 0; idx < NUM_STATES; idx++)
     {
         // normalize the states   
-        input[idx] = (input[idx] - in_norm_mean[idx])/in_norm_std[idx];
+        input_norm[idx] = (input[idx] - in_norm_mean[idx])/in_norm_std[idx];
     }
 }
 
@@ -147,11 +147,13 @@ Function: Neural network control
 */
 void nn_control(float* state, float* control)
 {
+    float state_norm[NUM_STATES];
+
     // 1 - pre-processing input
-    preprocess_input(state);
+    preprocess_input(state, state_norm);
 
     // 2 - neural network prediction
-    nn_predict(state, control);
+    nn_predict(state_norm, control);
     
     // 3 - post-processing output
     postprocess_output(control);

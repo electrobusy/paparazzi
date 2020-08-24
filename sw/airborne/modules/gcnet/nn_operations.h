@@ -11,7 +11,7 @@ Goal: Include header of different functions used to compute neural network opera
 
 #include "nn_parameters.h" // add nn properties and weights
 
-extern void preprocess_input(float* input);
+extern void preprocess_input(float* input, float* input_norm);
 
 extern void postprocess_output(float* output);
 

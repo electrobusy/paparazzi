@@ -88,32 +88,23 @@ float nn_process_time;
 
 // declare variables - position and velocity
 // -- optitrack:
-struct FloatVect3 pos_OT, vel_OT;
-// -- IMU:
-struct FloatVect3 pos_NED, vel_NED;
-// -- NN controller assumes NWU coordinate frame: 
-struct FloatVect3 pos_NWU, vel_NWU;
+struct FloatVect3 pos_enu, vel_enu;
 
 // -- network's frame 
-struct FloatVect2 delta_pos_NWU, delta_pos_net; // position
+struct FloatVect2 delta_pos_enu, delta_pos_net; // position
 struct FloatVect2 vel_net; // velocity
 float psi_ref_net;
 
 // declare variables - attitude
-// -- angles used for conversion
-struct FloatEulers att_euler_OT2NED = {0.0, 0.0, 0.0};
-struct FloatEulers att_euler_NED2NWU = {PI, 0.0, 0.0};
 // -- quaternions
-struct FloatQuat att_quat = {1, 0, 0, 0}; 
+struct FloatEulers att_euler_enu;
+struct FloatQuat att_quat; 
 
-// declare variables - transformation matrices
-struct FloatRMat R_OT_2_NED, R_NED_2_NWU;
-
-// define tolerances: 
+// define tolerances (later when you reach final position)
 float tol = 0.3;
 
 // desired position and yaw angle [-- make sure that this can be set up from the flight plan]
-float desired_X = 5;
+float desired_X = 0;
 float desired_Y = 0; 
 float desired_Z = 0; 
 float desired_psi = 0;
@@ -140,7 +131,7 @@ struct ctrl_struct {
 } ctrl;
 
 /*
-Function: Compute the time difference
+Function: Compute the time difference [miliseconds]
 */
 float timedifference_msec(struct timeval t_t0, struct timeval t_t1)
 {
@@ -152,60 +143,57 @@ Function: Guidance and Control Network function
 */ 
 void gcnet_control(UNUSED bool in_flight)
 {
-	// -- calculate rotational matrices (in euler angles)
-	float_rmat_of_eulers_321(&R_OT_2_NED, &att_euler_OT2NED); 
-	float_rmat_of_eulers_321(&R_NED_2_NWU, &att_euler_NED2NWU);
-
-	// -- get coordinates in NED (North-East-Down) frame (-- cyberzoo's)
+	// -- get position/velocity in ENU (East-North-Up) frame (-- cyberzoo's)
 	// position:    
-	pos_OT.x = stateGetPositionNed_f()->x;
-	pos_OT.y = stateGetPositionNed_f()->y;
-	pos_OT.z = stateGetPositionNed_f()->z;
+	pos_enu.x = stateGetPositionEnu_f()->x;
+	pos_enu.y = stateGetPositionEnu_f()->y; 
+	pos_enu.z = stateGetPositionEnu_f()->z;
 	// velocity: 
-	vel_OT.x = stateGetSpeedNed_f()->x;
-	vel_OT.y = stateGetSpeedNed_f()->y;
-	vel_OT.z = stateGetSpeedNed_f()->z;
-
-	// -- transform coordinates from NED to NWU (North-West-Up) frame: 
-	float_rmat_transp_vmult(&pos_NED, &R_OT_2_NED, &pos_OT);
-	float_rmat_transp_vmult(&vel_NED, &R_OT_2_NED, &vel_OT);
-
-	float_rmat_transp_vmult(&pos_NWU, &R_NED_2_NWU, &pos_NED);
-	float_rmat_transp_vmult(&vel_NWU, &R_NED_2_NWU, &vel_NED);
+	vel_enu.x = stateGetSpeedEnu_f()->x;
+	vel_enu.y = stateGetSpeedEnu_f()->y; 
+	vel_enu.z = stateGetSpeedEnu_f()->z;
+	// -- get angles 
+	// angles (in the enu frame)
+	att_euler_enu.phi = stateGetNedToBodyEulers_f()->phi; // N is same for both NED and ENU frames (so theta is the same)
+	att_euler_enu.theta = -stateGetNedToBodyEulers_f()->theta; // minus sign - because we are getting the angles from the NED frame -- needs conversion
+	att_euler_enu.psi = -stateGetNedToBodyEulers_f()->psi; // minus sign - because we are getting the angles from the NED frame -- needs conversion
 
 	// Compute the difference in position in the NWU frame: 
-	delta_pos_NWU.x = pos_NWU.x - desired_X;
-	delta_pos_NWU.y = pos_NWU.y - desired_Y;
+	delta_pos_enu.x = pos_enu.x - desired_X;
+	delta_pos_enu.y = pos_enu.y - desired_Y;
 
 	// Compute the value of psi_ref in the network's reference frame
-	psi_ref_net = att_euler_NED2NWU.psi - desired_psi;
+	psi_ref_net = att_euler_enu.psi - desired_psi;
 
 	// -- get coordinates in the network's reference frame (where the x-axis 
 	// points to the waypoint and the y axis is perpendicular to this):
 	// NOTE: 2-D coordinate transformation
-	delta_pos_net.x = cosf(psi_ref_net)*delta_pos_NWU.x + sinf(psi_ref_net)*delta_pos_NWU.y;
-	delta_pos_net.y = -sinf(psi_ref_net)*delta_pos_NWU.x + cosf(psi_ref_net)*delta_pos_NWU.y;
+	delta_pos_net.x = cosf(psi_ref_net)*delta_pos_enu.x + sinf(psi_ref_net)*delta_pos_enu.y;
+	delta_pos_net.y = -sinf(psi_ref_net)*delta_pos_enu.x + cosf(psi_ref_net)*delta_pos_enu.y;
 
 	// -- get horizontal velocity components aligned with the network's reference frame
 	// NOTE: 2-D coordinate transformation
-	vel_net.x = cosf(psi_ref_net)*vel_NWU.x + sinf(psi_ref_net)*vel_NWU.y;
-	vel_net.y = -sinf(psi_ref_net)*vel_NWU.x + cosf(psi_ref_net)*vel_NWU.y;
+	vel_net.x = cosf(psi_ref_net)*vel_enu.x + sinf(psi_ref_net)*vel_enu.y;
+	vel_net.y = -sinf(psi_ref_net)*vel_enu.x + cosf(psi_ref_net)*vel_enu.y;
 
 	// -- transform Euler to quaternions - function is already coded on "pprz_algebra_float.c" file
-	float_quat_of_eulers(&att_quat, &att_euler_NED2NWU);
+	float_quat_of_eulers(&att_quat, &att_euler_enu);
 
 	// -- assign states to the state vector that is fed to the network: 
 	state_nn[0] = delta_pos_net.x;
 	state_nn[1] = delta_pos_net.y; 
-	state_nn[2] = pos_NWU.z - desired_Z;
+	state_nn[2] = pos_enu.z - desired_Z;
 	state_nn[3] = vel_net.x;
 	state_nn[4] = vel_net.y;
-	state_nn[5] = vel_NWU.z; 
+	state_nn[5] = vel_enu.z; 
 	state_nn[6] = att_quat.qi;
 	state_nn[7] = att_quat.qx;
 	state_nn[8] = att_quat.qy; 
 	state_nn[9] = att_quat.qz; 
-
+	/* 
+	printf("==============================================\n");
+	printf("%f \t %f \t %f \t %f \t %f \t %f \t %f \t %f \t %f \t %f (states) \n", state_nn[0], state_nn[1], state_nn[2], state_nn[3], state_nn[4], state_nn[5], state_nn[6], state_nn[7], state_nn[8], state_nn[9]);
+	*/ 
 	// NOTE: variable "control_nn" was declared in gcnet_main.h - encodes the network's output
 
 	// -- feed state to the network 
@@ -214,8 +202,26 @@ void gcnet_control(UNUSED bool in_flight)
 	gettimeofday(&t1, 0);
 	nn_process_time = timedifference_msec(t0, t1);
 
+	// debugging - check if states are correctly sent to the drone
+	printf("==============================================\n");
+	printf("%f \t %f \t %f \t %f \t %f \t %f (x_enu, y_enu, z_enu, v_x_enu, v_y_enu, v_z_enu) \n", pos_enu.x, pos_enu.y, pos_enu.z, vel_enu.x, vel_enu.y, vel_enu.z);
+
+	printf("%f \t %f \t %f \t %f \t %f \t %f (x_des, y_des, dx_enu, dy_enu, psi, psi_des) \n", desired_X, desired_Y, delta_pos_enu.x, delta_pos_enu.y, att_euler_enu.psi, desired_psi);
+	printf("%f \t %f \t %f \t %f (dx_net, dy_net, vx_net, vy_net) \n", delta_pos_net.x, delta_pos_net.y, vel_net.x, vel_net.y);
+
+	printf("%f \t %f \t %f (phi_enu, theta_enu, psi_enu) \n", att_euler_enu.phi, att_euler_enu.theta, att_euler_enu.psi);
+	printf("%f \t %f \t %f \t %f (qi, qx, qy, qz) \n", att_quat.qi, att_quat.qx, att_quat.qy, att_quat.qz);
+	
+	printf("%f \t %f \t %f \t %f \t %f \t %f \t %f \t %f \t %f \t %f (states) \n", state_nn[0], state_nn[1], state_nn[2], state_nn[3], state_nn[4], state_nn[5], state_nn[6], state_nn[7], state_nn[8], state_nn[9]);
+	printf("%f \t %f \t %f \t %f (controls) \n", control_nn[0], control_nn[1], control_nn[2], control_nn[3]);
+	
+	printf("%f [ms]\n", nn_process_time);
+	printf("==============================================\n");
+
 	// -- Since thrust is within the interval [-m*g, m*g], we have to sum m*g
 	// control_nn[0] = control_nn[0] + BEBOP_MASS*GRAVITY_ACC; // to stay between 0 and 2*m*g 
+
+	// -- Now add -sign in the controls (because we come back to NED -- CHECK THIS!)
 }
 
 /**
@@ -226,7 +232,9 @@ void gcnet_control(UNUSED bool in_flight)
 // Start horizontal controller
 void guidance_h_module_init(void)
 { 
-
+	printf("==============================================\n");
+	printf("Entraste, CRL? SE SIM, MOSTRA ESTE PRINT!\n");
+	printf("==============================================\n");
 }
 
 // Enter in the guidance_h module
@@ -274,7 +282,7 @@ void guidance_h_module_run(bool in_flight)
 		}
 		else // below m*g (if we consider interval [0, 2*m*g])
 		{
-			ctrl.thrust_pct = (GUIDANCE_V_NOMINAL_HOVER_THROTTLE - 0)/(0.5 - 0)*ctrl.thrust_pct;
+			ctrl.thrust_pct = (GUIDANCE_V_NOMINAL_HOVER_THROTTLE - 0)/(0.5 - 0)*(-ctrl.thrust_pct);
 		}		
 		
 		int32_t thrust_int = ctrl.thrust_pct * MAX_PPRZ; // see how to transform this! 

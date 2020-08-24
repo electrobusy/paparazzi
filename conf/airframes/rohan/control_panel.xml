@@ -1,5 +1,3 @@
-<!-- change this! -->
-
 <control_panel name="paparazzi control panel">
     <section name="programs">
         <program name="Server" command="sw/ground_segment/tmtc/server"/>
