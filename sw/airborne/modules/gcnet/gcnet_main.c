@@ -104,9 +104,9 @@ struct FloatQuat att_quat;
 float tol = 0.3;
 
 // desired position and yaw angle [-- make sure that this can be set up from the flight plan]
-float desired_X = 0;
+float desired_X = 10;
 float desired_Y = 0; 
-float desired_Z = 0; 
+float desired_Z = 1; 
 float desired_psi = 0;
 
 // Neural Network State and Controls
@@ -127,7 +127,7 @@ struct ctrl_struct {
   struct Int32Eulers cmd;
 
 	// thrust pct
-	int32_t thrust_pct; 
+	float thrust_pct; 
 } ctrl;
 
 /*
@@ -180,11 +180,11 @@ void gcnet_control(UNUSED bool in_flight)
 	float_quat_of_eulers(&att_quat, &att_euler_enu);
 
 	// -- assign states to the state vector that is fed to the network: 
-	state_nn[0] = delta_pos_net.x;
-	state_nn[1] = delta_pos_net.y; 
+	state_nn[0] = delta_pos_enu.x;
+	state_nn[1] = delta_pos_enu.y; 
 	state_nn[2] = pos_enu.z - desired_Z;
-	state_nn[3] = vel_net.x;
-	state_nn[4] = vel_net.y;
+	state_nn[3] = vel_enu.x;
+	state_nn[4] = vel_enu.y;
 	state_nn[5] = vel_enu.z; 
 	state_nn[6] = att_quat.qi;
 	state_nn[7] = att_quat.qx;
@@ -203,25 +203,27 @@ void gcnet_control(UNUSED bool in_flight)
 	nn_process_time = timedifference_msec(t0, t1);
 
 	// debugging - check if states are correctly sent to the drone
+	/*
+	printf("==================== START ===================\n");
 	printf("==============================================\n");
 	printf("%f \t %f \t %f \t %f \t %f \t %f (x_enu, y_enu, z_enu, v_x_enu, v_y_enu, v_z_enu) \n", pos_enu.x, pos_enu.y, pos_enu.z, vel_enu.x, vel_enu.y, vel_enu.z);
 
-	printf("%f \t %f \t %f \t %f \t %f \t %f (x_des, y_des, dx_enu, dy_enu, psi, psi_des) \n", desired_X, desired_Y, delta_pos_enu.x, delta_pos_enu.y, att_euler_enu.psi, desired_psi);
+	printf("%f \t %f \t %f \t %f \t %f \t %f (x_des, y_des, dx_enu, dy_enu, psi, psi_des) \n", desired_X, desired_Y, delta_pos_enu.x, delta_pos_enu.y, att_euler_enu.psi*180/PI, desired_psi*180/PI);
 	printf("%f \t %f \t %f \t %f (dx_net, dy_net, vx_net, vy_net) \n", delta_pos_net.x, delta_pos_net.y, vel_net.x, vel_net.y);
 
-	printf("%f \t %f \t %f (phi_enu, theta_enu, psi_enu) \n", att_euler_enu.phi, att_euler_enu.theta, att_euler_enu.psi);
-	printf("%f \t %f \t %f \t %f (qi, qx, qy, qz) \n", att_quat.qi, att_quat.qx, att_quat.qy, att_quat.qz);
+	printf("%f \t %f \t %f (phi_enu, theta_enu, psi_enu) [deg] \n", att_euler_enu.phi*180/PI, att_euler_enu.theta*180/PI, att_euler_enu.psi*180/PI);
+	printf("%f \t %f \t %f \t %f (qi, qx, qy, qz) [-] \n", att_quat.qi, att_quat.qx, att_quat.qy, att_quat.qz);
 	
 	printf("%f \t %f \t %f \t %f \t %f \t %f \t %f \t %f \t %f \t %f (states) \n", state_nn[0], state_nn[1], state_nn[2], state_nn[3], state_nn[4], state_nn[5], state_nn[6], state_nn[7], state_nn[8], state_nn[9]);
 	printf("%f \t %f \t %f \t %f (controls) \n", control_nn[0], control_nn[1], control_nn[2], control_nn[3]);
 	
 	printf("%f [ms]\n", nn_process_time);
 	printf("==============================================\n");
-
+	*/ 
 	// -- Since thrust is within the interval [-m*g, m*g], we have to sum m*g
 	// control_nn[0] = control_nn[0] + BEBOP_MASS*GRAVITY_ACC; // to stay between 0 and 2*m*g 
 
-	// -- Now add -sign in the controls (because we come back to NED -- CHECK THIS!)
+	// -- Now add -sign in the controls (because we come back to NED)
 }
 
 /**
@@ -232,14 +234,20 @@ void gcnet_control(UNUSED bool in_flight)
 // Start horizontal controller
 void guidance_h_module_init(void)
 { 
+	/*
 	printf("==============================================\n");
 	printf("Entraste, CRL? SE SIM, MOSTRA ESTE PRINT!\n");
 	printf("==============================================\n");
+	*/
 }
 
 // Enter in the guidance_h module
 void guidance_h_module_enter(void)
 {
+	printf("==============================================\n");
+	printf("Entras neste print, OH CRL? SE SIM, MOSTRA ESTE PRINT!\n");
+	printf("==============================================\n"); 
+
 	// start quaternion control set-points to zero: 
 	quat_ctrl_sp.qi = 1;
 	quat_ctrl_sp.qx = 0;
@@ -275,6 +283,11 @@ void guidance_h_module_run(bool in_flight)
 		// 2 -- propagate inner loop control: body thrust 
 		// -- simulated thrust percentage: 
 		ctrl.thrust_pct = control_nn[0]/(BEBOP_MASS*GRAVITY_ACC);
+		/*
+		printf("==============================================\n");
+		printf("%f %f (control_nn[0], pct (before))\n", control_nn[0], ctrl.thrust_pct);
+		printf("==============================================\n");
+		*/ 
 		// -- real hovering thrust percentage is not at 0.5, therefore we need an adjustment 
 		if (ctrl.thrust_pct >= 0) // above m*g (if we consider interval [0, 2*m*g])
 		{
@@ -284,6 +297,10 @@ void guidance_h_module_run(bool in_flight)
 		{
 			ctrl.thrust_pct = (GUIDANCE_V_NOMINAL_HOVER_THROTTLE - 0)/(0.5 - 0)*(-ctrl.thrust_pct);
 		}		
+		
+		printf("==============================================\n");
+		printf("%f %f (control_nn[0], pct (after))\n", control_nn[0], ctrl.thrust_pct);
+		printf("==============================================\n");
 		
 		int32_t thrust_int = ctrl.thrust_pct * MAX_PPRZ; // see how to transform this! 
 
@@ -302,8 +319,8 @@ void guidance_h_module_run(bool in_flight)
 		// to obtain desired attitude (because the INDI rate PR is not done yet):
 		// 3.1 -- Get desired rates: 
 		omega_sp.p = control_nn[1];
-		omega_sp.q = control_nn[2];
-		omega_sp.r = control_nn[3];
+		omega_sp.q = -control_nn[2];
+		omega_sp.r = -control_nn[3];
 
 		// 3.2 -- Get desired attitude by integrating the rates:  
 		float_quat_integrate(&quat_ctrl_sp, &omega_sp, 1/PERIODIC_FREQUENCY);
@@ -319,6 +336,14 @@ void guidance_h_module_run(bool in_flight)
 		// 4 -- Set attitude setpoint and run the stabilization command: 
 		stabilization_attitude_set_rpy_setpoint_i(&(ctrl.cmd));
   	stabilization_attitude_run(in_flight);
+
+		printf("==============================================\n");
+		printf("%f \t %f \t %f (p_cmd, q_cmd, r_cmd) [rad/s] \n", omega_sp.p, omega_sp.q, omega_sp.r);
+		printf("%f \t %f \t %f \t %f (qi_cmd, qx_cmd, qy_cmd, qz_cmd) [deg] \n", quat_ctrl_sp.qi, quat_ctrl_sp.qx, quat_ctrl_sp.qy, quat_ctrl_sp.qz);
+		printf("%f \t %f \t %f (phi_cmd, theta_cmd, psi_cmd) [deg] \n", euler_ctrl_sp.phi*180/PI, euler_ctrl_sp.theta*180/PI, euler_ctrl_sp.psi*180/PI);
+		printf("%d \t %d \t %d (phi_cmd, theta_cmd, psi_cmd) [int] \n", ctrl.cmd.phi, ctrl.cmd.theta, ctrl.cmd.psi);
+		printf("%d \t %d \t %d \t %d (thrust, roll, pitch, yaw) [int] \n", stabilization_cmd[COMMAND_THRUST], stabilization_cmd[COMMAND_ROLL], stabilization_cmd[COMMAND_PITCH], stabilization_cmd[COMMAND_YAW]);
+		printf("==============================================\n");
 		
 		// -- if drone within the final region, then return True and switch to another controller
 		/* 
