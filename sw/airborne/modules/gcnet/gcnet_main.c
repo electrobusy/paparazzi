@@ -47,12 +47,6 @@
 #include <time.h>
 #include <stdbool.h> // get "true" and "false" identifiers
 
-// user-made libraries with:
-// -- functions for nn operations
-#include "modules/gcnet/nn_operations.h"
-// -- variables with nn parameters (weights, biases and other information about the nets)
-// #include "modules/gcnet/nn_parameters.h" // -- already in "nn_operations.h"
-
 // declare math parameter
 #ifndef PI
 #define PI 3.1415
@@ -67,10 +61,6 @@
 #define BEBOP_MASS 0.38905 
 #endif
 
-// neural network state and control/action: 
-float state_nn[NUM_STATES];
-float control_nn[NUM_CONTROLS];
-
 /* ---
 Declare functions from this file
 --- */
@@ -81,6 +71,10 @@ void gcnet_guidance(bool in_flight);
 /* --- 
 Declare important variables: 
 --- */
+// neural network state and control/action: 
+float state_nn[NUM_STATES];
+float control_nn[NUM_CONTROLS];
+
 // declare variables - time: 
 // -- to obtain processing time:
 struct timeval t0; 
@@ -102,18 +96,11 @@ float psi_net;
 struct FloatEulers att_euler_enu;
 struct FloatQuat att_quat; 
 
-// define tolerances (later when you reach final position)
-float tol = 0.3;
-
-// desired position and yaw angle [-- make sure that this can be set up from the flight plan]
-float desired_X = 0;
-float desired_Y = 5; 
+// desired position and yaw angle [-- MAKE SURE THAT THIS CAN BE SET FROM THE FLIGHT PLAN]
+float desired_X = 3;
+float desired_Y = 0; 
 float desired_Z = 1; 
 float desired_psi = 0;
-
-// Neural Network State and Controls
-float state_nn[NUM_STATES];
-float control_nn[NUM_CONTROLS];
 
 // -- quaternion control setpoints -t this is used because the INDI rate interface PR is not done
 struct FloatQuat quat_ctrl_sp;
@@ -132,6 +119,9 @@ struct ctrl_struct {
 	float thrust_pct; 
 } ctrl;
 
+// define tolerances (later when you reach final position)
+float tol = 0.3;
+
 /* ----------- FUNTIONS ----------- */
 
 // Sending stuff to ground station
@@ -139,6 +129,8 @@ struct ctrl_struct {
 static void send_gcnet_main(struct transport_tx *trans, struct link_device *dev) 
 {
 	struct FloatEulers att_euler_enu_deg = {att_euler_enu.phi*180/PI, att_euler_enu.theta*180/PI, att_euler_enu.psi*180/PI};	
+	struct FloatEulers att_euler_cmd_enu_deg = {euler_ctrl_sp.phi*180/PI, -euler_ctrl_sp.theta*180/PI, -euler_ctrl_sp.psi*180/PI};	
+
 	pprz_msg_send_GCNET_MAIN(
 		trans, dev, AC_ID, 
 		&(stateGetPositionEnu_f()->x), &(stateGetPositionEnu_f()->y), &(stateGetPositionEnu_f()->z),
@@ -147,7 +139,8 @@ static void send_gcnet_main(struct transport_tx *trans, struct link_device *dev)
 		&(state.ned_origin_f.hmsl),
 		&(state_nn[0]), &(state_nn[1]), &(state_nn[2]), &(state_nn[3]), &(state_nn[4]), &(state_nn[5]),
 		&(state_nn[6]), &(state_nn[7]), &(state_nn[8]), &(state_nn[9]),
-		&(ctrl.thrust_pct), &(omega_sp.p), &(omega_sp.q), &(omega_sp.r),
+		&(ctrl.thrust_pct), &(control_nn[1]), &(control_nn[2]), &(control_nn[3]),
+		&(att_euler_cmd_enu_deg.phi), &(att_euler_cmd_enu_deg.theta), &(att_euler_cmd_enu_deg.psi), 
 		&(nn_process_time)); 
     // &autopilot.mode, &record);
 }
@@ -270,18 +263,18 @@ void gcnet_guidance(bool in_flight)
 	// -- real hovering thrust percentage is not at 0.5, therefore we need an adjustment 
 	if (ctrl.thrust_pct >= 0) // above m*g (if we consider interval [0, 2*m*g])
 	{
+		Bound(ctrl.thrust_pct, 0, 0.5);
 		ctrl.thrust_pct = GUIDANCE_V_NOMINAL_HOVER_THROTTLE + (1 - GUIDANCE_V_NOMINAL_HOVER_THROTTLE)/(0.5 - 0)*ctrl.thrust_pct;
 	}
 	else // below m*g (if we consider interval [0, 2*m*g])
 	{
+		Bound(ctrl.thrust_pct, -0.5, 0);
 		ctrl.thrust_pct = (GUIDANCE_V_NOMINAL_HOVER_THROTTLE - 0)/(0.5 - 0)*(-ctrl.thrust_pct);
 	}		
 	
-	/* 
 	printf("==============================================\n");
 	printf("%f %f (control_nn[0], pct (after))\n", control_nn[0], ctrl.thrust_pct);
 	printf("==============================================\n");
-	*/ 
 	
 	int32_t thrust_int = ctrl.thrust_pct * MAX_PPRZ; // see how to transform this! 
 
@@ -326,7 +319,6 @@ void gcnet_guidance(bool in_flight)
 	printf("%d \t %d \t %d \t %d (thrust, roll, pitch, yaw) [int] \n", stabilization_cmd[COMMAND_THRUST], stabilization_cmd[COMMAND_ROLL], stabilization_cmd[COMMAND_PITCH], stabilization_cmd[COMMAND_YAW]);
 	printf("==============================================\n");
 		
-
 	// -- if drone within the final region, then return True and switch to another controller
 	/* 
 	if ((fabs(state_nn[0]) < tol) && (fabs(state_nn[1]) < tol) && (fabs(state_nn[2]) < 0.1))
@@ -382,15 +374,16 @@ void guidance_h_module_read_rc(void)
 // Run the horizontal controller
 void guidance_h_module_run(bool in_flight)
 {
+	/*
 	// in case of low batery, keep the drone in the NAV mode and hover
   if (electrical.bat_low) 
 	{
     autopilot_static_set_mode(AP_MODE_NAV);
   } 
   else 
-	{ 
+	{ */
 		gcnet_guidance(in_flight);
-	}
+	// }
 }
 
 /**

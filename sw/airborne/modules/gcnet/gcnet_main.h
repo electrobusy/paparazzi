@@ -36,6 +36,65 @@
 
 #define GUIDANCE_V_MODE_MODULE_SETTING GUIDANCE_V_MODE_MODULE
 
+// user-made libraries with:
+// -- functions for nn operations
+#include "modules/gcnet/nn_operations.h"
+// -- variables with nn parameters (weights, biases and other information about the nets)
+// #include "modules/gcnet/nn_parameters.h" // -- already in "nn_operations.h"
+
+/* --- 
+Variables declared here because of logs -- go to "file_logger.c" in modules/loggers/file_logger.c
+That is why I added all variables as "extern", so that file can access these variables from "gcnet_main.c" file
+--- */
+// neural network state and control/action: 
+extern float state_nn[NUM_STATES];
+extern float control_nn[NUM_CONTROLS];
+
+// declare variables - time: 
+// -- to obtain processing time:
+// extern struct timeval t0; 
+// extern struct timeval t1;
+// -- processing time: 
+extern float nn_process_time; 
+
+// declare variables - position and velocity
+// -- optitrack:
+extern struct FloatVect3 pos_enu, vel_enu;
+
+// -- network's frame 
+extern struct FloatVect2 delta_pos_enu, delta_pos_net; // position
+extern struct FloatVect2 vel_net; // velocity
+extern float psi_net;
+
+// declare variables - attitude
+// -- quaternions
+extern struct FloatEulers att_euler_enu;
+extern struct FloatQuat att_quat; 
+
+// desired position and yaw angle [-- MAKE SURE THAT THIS CAN BE SET FROM THE FLIGHT PLAN]
+extern float desired_X;
+extern float desired_Y; 
+extern float desired_Z; 
+extern float desired_psi;
+
+// -- quaternion control setpoints -t this is used because the INDI rate interface PR is not done
+extern struct FloatQuat quat_ctrl_sp;
+extern struct FloatEulers euler_ctrl_sp;
+extern struct FloatRates omega_sp;
+
+// control inputs (from receiver and own commands): 
+extern struct ctrl_struct {
+	// RC Inputs
+  struct Int32Eulers rc_sp;
+
+	// Output commanded attitude
+  struct Int32Eulers cmd;
+
+	// thrust pct
+	float thrust_pct; 
+} ctrl;
+
+// GUIDANCE LOOPS: 
 // Implement own Horizontal loops: 
 extern void guidance_h_module_init(void);
 extern void guidance_h_module_enter(void);

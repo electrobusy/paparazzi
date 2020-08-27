@@ -67,21 +67,11 @@
                 <arg flag="-c" constant="*:telemetry:GCNET_MAIN:vy_enu"/>
                 <arg flag="-c" constant="*:telemetry:GCNET_MAIN:vz_enu"/>
                 <arg flag="-n"/> <!-- "-n" flag opens new window -->
-                <arg flag="-g" constant="750x250-0+500"/>
-                <arg flag="-t" constant="ATTITUDE_ENU"/>
-                <arg flag="-u" constant="0.05"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:phi_enu"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:theta_enu"/>
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:psi_enu"/>
-                <arg flag="-n"/> <!-- "-n" flag opens new window -->
                 <arg flag="-g" constant="750x250-800+0"/>
                 <arg flag="-t" constant="THRUST"/>
                 <arg flag="-u" constant="0.05"/> 
                 <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:T_nn"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:T_nn_pct"/> 
                 <arg flag="-n"/> <!-- "-n" flag opens new window -->
                 <arg flag="-g" constant="750x250-800+250"/>
                 <arg flag="-t" constant="P-Q-R"/>
@@ -92,6 +82,30 @@
                 <arg flag="-c" constant="*:telemetry:GCNET_MAIN:p_nn"/>
                 <arg flag="-c" constant="*:telemetry:GCNET_MAIN:q_nn"/> 
                 <arg flag="-c" constant="*:telemetry:GCNET_MAIN:r_nn"/>  
+                <arg flag="-n"/> <!-- "-n" flag opens new window -->
+                <arg flag="-g" constant="750x250-0+500"/>
+                <arg flag="-t" constant="ATTITUDE_PHI_ENU"/>
+                <arg flag="-u" constant="0.05"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:phi_enu"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:phi_cmd"/>
+                <arg flag="-n"/> <!-- "-n" flag opens new window -->
+                <arg flag="-g" constant="750x250-800+500"/>
+                <arg flag="-t" constant="ATTITUDE_THETA_ENU"/>
+                <arg flag="-u" constant="0.05"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:theta_enu"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:theta_cmd"/>
+                <arg flag="-n"/> <!-- "-n" flag opens new window -->
+                <arg flag="-g" constant="750x250-0+750"/>
+                <arg flag="-t" constant="ATTITUDE_PSI_ENU"/>
+                <arg flag="-u" constant="0.05"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:psi_enu"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:psi_cmd"/>
             </program>
             <!--
             <program name="Settings">

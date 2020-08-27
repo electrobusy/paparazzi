@@ -43,6 +43,9 @@
 #include "firmwares/fixedwing/stabilization/stabilization_adaptive.h"
 #endif
 
+// Add neural network library 
+#include "modules/gcnet/gcnet_main.h"
+
 
 /** Set the default File logger path to the USB drive */
 #ifndef FILE_LOGGER_PATH
@@ -63,10 +66,55 @@ static FILE *file_logger = NULL;
  */
 static void file_logger_write_header(FILE *file) {
   fprintf(file, "time,");
-  fprintf(file, "pos_x,pos_y,pos_z,");
-  fprintf(file, "vel_x,vel_y,vel_z,");
-  fprintf(file, "att_phi,att_theta,att_psi,");
-  fprintf(file, "rate_p,rate_q,rate_r,");
+  // > Logs from body - In NED frame:
+  fprintf(file, "pos_x_NED,pos_y_NED,pos_z_NED,");
+  fprintf(file, "vel_x_NED,vel_y_NED,vel_z_NED,");
+  fprintf(file, "acc_x_NED,acc_y_NED,acc_z_NED,");
+  fprintf(file, "att_phi_NED,att_theta_NED,att_psi_NED,");
+  fprintf(file, "att_qi_NED,att_qx_NED,att_qy_NED,att_qz_NED,");
+  fprintf(file, "rate_p_NED,rate_q_NED,rate_r_NED,");
+  // > Neural Network file - Logs: [MY FILE]
+  // -- post-processing time: 
+  fprintf(file, "NN_pp_time,");
+  // -- body state variables:
+  fprintf(file, "pos_x_ENU,pos_y_ENU,pos_z_ENU,");
+  fprintf(file, "vel_x_ENU,vel_y_ENU,vel_z_ENU,");
+  fprintf(file, "att_phi_ENU,att_theta_ENU,att_psi_ENU,");
+  fprintf(file, "att_qi_ENU,att_qx_ENU,att_qy_ENU,att_qz_ENU,");
+  fprintf(file, "rate_p_ENU,rate_q_ENU,rate_r_ENU,");
+  // -- desired position and yaw angle: 
+  fprintf(file, "des_pos_x_ENU,des_pos_y_ENU,des_pos_z_ENU,des_pos_psi_ENU,");
+  // -- delta position - ENU and Network (intermediate) frames
+  fprintf(file, "d_pos_x_ENU,d_pos_y_ENU,d_pos_x_net,d_pos_y_net,");
+  // -- velocity and yaw angle in Network frame
+  fprintf(file, "v_x_net,v_y_net,yaw_net,");
+  // -- Neural Network - inputs (states):
+  fprintf(file, "x_nn,y_nn,z_nn,v_x_nn,v_y_nn,v_z_nn,qi_nn,qx_nn,qy_nn,qz_nn,");
+  // -- Neural Network - outputs (controls):
+  fprintf(file, "T_nn,");
+  fprintf(file, "p_nn,q_nn,r_nn,");
+  // -- Thrust percentage: 
+  fprintf(file, "T_pct,"); // before conversion
+  fprintf(file, "T_pct_conv,"); // after conversion
+  // > Attitude commands - from rate integration:
+  fprintf(file, "qi_cmd,qx_cmd,qy_cmd,qz_cmd,");
+  fprintf(file, "phi_cmd,theta_cmd,psi_cmd,");
+  // > INDI controller: 
+  // fill this in! 
+  // > Lower level controls - Rotors: 
+  // -- Motor Mixing commands:
+  fprintf(file, "motor_cmd_1,motor_cmd_2,motor_cmd_3,motor_cmd_4,");
+  // -- Motor Commands - Trim:
+  fprintf(file, "motor_cmd_trim_1,motor_cmd_trim_2,motor_cmd_trim_3,motor_cmd_trim_4,");
+  // -- Motor Commands - Thrust:
+  fprintf(file, "motor_cmd_thrust_1,motor_cmd_thrust_2,motor_cmd_thrust_3,motor_cmd_thrust_4,");
+  // -- Motor Commands - Pitch:
+  fprintf(file, "motor_cmd_pitch_1,motor_cmd_pitch_2,motor_cmd_pitch_3,motor_cmd_pitch_4,");
+  // -- Motor Commands - Roll:
+  fprintf(file, "motor_cmd_roll_1,motor_cmd_roll_2,motor_cmd_roll_3,motor_cmd_roll_4,");
+  // > IMU accelerations: 
+  fprintf(file, "IMU_ax,IMU_ax,IMU_az,");
+  // [ADD MORE - IN THE END]
 #ifdef COMMAND_THRUST
   fprintf(file, "cmd_thrust,cmd_roll,cmd_pitch,cmd_yaw\n");
 #else
@@ -81,16 +129,18 @@ static void file_logger_write_header(FILE *file) {
  * @param file Log file pointer
  */
 static void file_logger_write_row(FILE *file) {
-  struct NedCoor_f *pos = stateGetPositionNed_f();
-  struct NedCoor_f *vel = stateGetSpeedNed_f();
+  struct EnuCoor_f *pos = stateGetPositionEnu_f(); 
+  struct EnuCoor_f *vel = stateGetSpeedEnu_f(); 
   struct FloatEulers *att = stateGetNedToBodyEulers_f();
   struct FloatRates *rates = stateGetBodyRates_f();
 
   fprintf(file, "%f,", get_sys_time_float());
   fprintf(file, "%f,%f,%f,", pos->x, pos->y, pos->z);
   fprintf(file, "%f,%f,%f,", vel->x, vel->y, vel->z);
-  fprintf(file, "%f,%f,%f,", att->phi, att->theta, att->psi);
-  fprintf(file, "%f,%f,%f,", rates->p, rates->q, rates->r);
+  fprintf(file, "%f,%f,%f,", att->phi, -att->theta, -att->psi); 
+  fprintf(file, "%f,%f,%f,", rates->p, -rates->q, -rates->r); 
+  fprintf(file, "%f,%f,%f,", control_nn[1], control_nn[2], control_nn[3]);
+  fprintf(file, "%f,", control_nn[0]);
 #ifdef COMMAND_THRUST
   fprintf(file, "%d,%d,%d,%d\n",
       stabilization_cmd[COMMAND_THRUST], stabilization_cmd[COMMAND_ROLL],
