@@ -21,6 +21,7 @@
     <waypoint name="WP2" x="-4" y="4"/>
     <waypoint name="WP3" x="4" y="4"/>
     <waypoint name="WP4" x="4" y="-4"/>
+    <waypoint name="desired" x="5" y="0"/>
 
     <!-- Important for the exceptions -->
     <waypoint name="CLIMB" x="1.9" y="1.0"/>

@@ -1,10 +1,13 @@
+<!-- [COMMENT] Rohan: My own control panel -->
 <control_panel name="paparazzi control panel">
-    <section name="programs">
+    <section name="programs"> <!-- Here we define all the programs/processes available in paparazzi -->
         <program name="Server" command="sw/ground_segment/tmtc/server"/>
         <program name="Data Link" command="sw/ground_segment/tmtc/link"/>
         <program name="GCS" command="sw/ground_segment/cockpit/gcs"/>
         <program name="Messages" command="sw/ground_segment/tmtc/messages"/>
-        <program name="Settings" command="sw/ground_segment/tmtc/settings"/>
+        <program name="Settings" command="sw/ground_segment/tmtc/settings">
+          <arg flag="-ac" constant="@AIRCRAFT"/>
+        </program>
         <program name="Log Plotter" command="sw/logalizer/logplotter"/>
         <program name="Real-time Plotter" command="sw/logalizer/plotter"/>
         <program name="Log File Player" command="sw/logalizer/play"/>
@@ -14,8 +17,9 @@
         <program name="NatNet" command="sw/ground_segment/misc/natnet2ivy"/>
         <program name="Gazebo" command="sw/tools/gzclient_launcher.sh"/>
     </section>
-    <section name="sessions">
-        <session name="Simulation - Gazebo">
+    <section name="sessions"> <!-- Here we define all the sessions with previously included programs/processes -->
+        <!-- Session - Simulation with Hobbyking joystick -->
+        <session name="Simulation - Joystick">
             <program name="Simulator">
                 <arg flag="-a" constant="@AIRCRAFT"/>
                 <arg flag="-t" constant="nps"/>
@@ -23,7 +27,7 @@
             <program name="Data Link">
                 <arg flag="-d" constant="/dev/ttyUSB0"/>
                 <arg flag="-udp"/>
-                <arg flag="-ping_period" constant="100"/>
+                <!-- <arg flag="-ping_period" constant="100"/> --> 
             </program>
             <program name="Server">
                 <arg flag="-n"/>
@@ -36,113 +40,100 @@
                 <arg flag="-track_size" constant="200"/>
                 <arg flag="-zoom" constant="40."/>
             </program>
-            <program name="Gazebo"/>
+            <!-- 
             <program name="Messages">
                 <arg flag="-g" constant="300x300-1000+600"/>
+            </program> -->
+            <program name="Joystick">
+                <arg flag="-ac" constant="@AIRCRAFT"/>
+                <arg flag="hobbyking.xml"/>
             </program>
-            <program name="Real-time Plotter">
-                <arg flag="-g" constant="1000x250-1000+0"/>
-                <arg flag="-t" constant="DIVERGENCE"/>
-                <arg flag="-u" constant="0.05"/>
-                <arg flag="-c" constant="0.00"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:D"/>
-                <arg flag="-c" constant="*:telemetry:OPTIC_FLOW_EST:D_true"/>
-                <arg flag="-n"/>
-                <arg flag="-g" constant="1000x250-0+0"/>
-                <arg flag="-t" constant="H+V"/>
-                <arg flag="-u" constant="0.05"/>
-                <arg flag="-c" constant="0.00"/>
-                <arg flag="-c" constant="1.00"/>
-                <arg flag="-c" constant="-4.00"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:h"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:v"/>
-                <arg flag="-n"/>
-                <arg flag="-g" constant="1000x250-0+250"/>
-                <arg flag="-t" constant="ACCELERATION"/>
-                <arg flag="-u" constant="0.05"/>
-                <arg flag="-c" constant="0.00"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:T"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:a_raw"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:a_lp"/>
-                <arg flag="-n"/>
-                <arg flag="-g" constant="1000x250-0+500"/>
+            <program name="Real-time Plotter"> 
+                <arg flag="-g" constant="750x250-0+0"/> <!-- "-g" flag specifies -->
+                <arg flag="-t" constant="POSITION_ENU"/> <!-- "-t" flag gives a title -->
+                <arg flag="-u" constant="0.05"/> <!-- "-u" flag updates the time -->
+                <arg flag="-c" constant="0.00"/> <!-- first "-c" flag allows us to start the plot with given value, in this case, 0.00 -->
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:x_enu"/> <!-- "-c" flag also let's us choose the variable to plot -->
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:y_enu"/>
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:z_enu"/>
+                <arg flag="-n"/> <!-- "-n" flag opens new window -->
+                <arg flag="-g" constant="750x250-0+250"/>
+                <arg flag="-t" constant="VELOCITY_ENU"/>
+                <arg flag="-u" constant="0.05"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:vx_enu"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:vy_enu"/>
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:vz_enu"/>
+                <arg flag="-n"/> <!-- "-n" flag opens new window -->
+                <arg flag="-g" constant="750x250-0+500"/>
+                <arg flag="-t" constant="ATTITUDE_ENU"/>
+                <arg flag="-u" constant="0.05"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:phi_enu"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:theta_enu"/>
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:psi_enu"/>
+                <arg flag="-n"/> <!-- "-n" flag opens new window -->
+                <arg flag="-g" constant="750x250-800+0"/>
                 <arg flag="-t" constant="THRUST"/>
-                <arg flag="-u" constant="0.05"/>
-                <arg flag="-c" constant="0.00"/>
-                <arg flag="-c" constant="*:telemetry:ROTORCRAFT_FP:thrust"/>
-                <arg flag="-n"/>
-                <arg flag="-g" constant="1000x250-0+750"/>
-                <arg flag="-t" constant="STATUS"/>
-                <arg flag="-u" constant="0.05"/>
-                <arg flag="-c" constant="0.00"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:mode"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:record"/>
-                <arg flag="-c" constant="*:telemetry:ROTORCRAFT_STATUS:ap_v_mode"/>
-                <arg flag="-c" constant="*:telemetry:ROTORCRAFT_STATUS:ap_in_flight"/>
+                <arg flag="-u" constant="0.05"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:T_nn"/> 
+                <arg flag="-n"/> <!-- "-n" flag opens new window -->
+                <arg flag="-g" constant="750x250-800+250"/>
+                <arg flag="-t" constant="P-Q-R"/>
+                <arg flag="-u" constant="0.05"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:p_nn"/>
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:q_nn"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:r_nn"/>  
             </program>
+            <!--
             <program name="Settings">
                 <arg flag="-ac" constant="@AIRCRAFT"/>
                 <arg flag="-g" constant="800x200-1000+300"/>
-            </program>
+            </program> -->
         </session>
-        <session name="Flight UDP">
+        <!-- Session - Simulation with Gazebo and Hobbyking joystick -->
+        <session name="Simulation - Gazebo + Joystick">
+            <program name="Simulator">
+                <arg flag="-a" constant="@AIRCRAFT"/>
+                <arg flag="-t" constant="nps"/>
+            </program>
             <program name="Data Link">
                 <arg flag="-d" constant="/dev/ttyUSB0"/>
                 <arg flag="-udp"/>
+                <!-- <arg flag="-ping_period" constant="100"/> --> 
             </program>
-            <program name="Server"/>
-            <program name="GCS"/>
-            <program name="NatNet" command="sw/ground_segment/misc/natnet2ivy">
-                <arg flag="-ac 9999" constant="@AC_ID"/>
+            <program name="Server">
+                <arg flag="-n"/>
             </program>
+            <program name="GCS">
+                <arg flag="-maximize"/>
+                <arg flag="-center_ac"/>
+                <arg flag="-mercator"/>
+                <arg flag="-maps_no_http"/>
+                <arg flag="-track_size" constant="200"/>
+                <arg flag="-zoom" constant="40."/>
+            </program>
+            <!-- 
             <program name="Messages">
                 <arg flag="-g" constant="300x300-1000+600"/>
-            </program>
-            <program name="Real-time Plotter">
-                <arg flag="-g" constant="1000x250-1000+0"/>
-                <arg flag="-t" constant="DIVERGENCE"/>
-                <arg flag="-u" constant="0.05"/>
-                <arg flag="-c" constant="0.00"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:D"/>
-                <arg flag="-c" constant="*:telemetry:OPTIC_FLOW_EST:D_true"/>
-                <arg flag="-n"/>
-                <arg flag="-g" constant="1000x250-0+0"/>
-                <arg flag="-t" constant="H+V"/>
-                <arg flag="-u" constant="0.05"/>
-                <arg flag="-c" constant="0.00"/>
-                <arg flag="-c" constant="1.00"/>
-                <arg flag="-c" constant="-4.00"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:h"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:v"/>
-                <arg flag="-n"/>
-                <arg flag="-g" constant="1000x250-0+250"/>
-                <arg flag="-t" constant="ACCELERATION"/>
-                <arg flag="-u" constant="0.05"/>
-                <arg flag="-c" constant="0.00"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:T"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:a_raw"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:a_lp"/>
-                <arg flag="-n"/>
-                <arg flag="-g" constant="1000x250-0+500"/>
-                <arg flag="-t" constant="THRUST"/>
-                <arg flag="-u" constant="0.05"/>
-                <arg flag="-c" constant="0.00"/>
-                <arg flag="-c" constant="*:telemetry:ROTORCRAFT_FP:thrust"/>
-                <arg flag="-n"/>
-                <arg flag="-g" constant="1000x250-0+750"/>
-                <arg flag="-t" constant="STATUS"/>
-                <arg flag="-u" constant="0.05"/>
-                <arg flag="-c" constant="0.00"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:mode"/>
-                <arg flag="-c" constant="*:telemetry:SPIKING_LANDING:record"/>
-                <arg flag="-c" constant="*:telemetry:ROTORCRAFT_STATUS:ap_v_mode"/>
-                <arg flag="-c" constant="*:telemetry:ROTORCRAFT_STATUS:ap_in_flight"/>
-                <arg flag="-c" constant="*:telemetry:ROTORCRAFT_STATUS:gps_status"/>
-            </program>
-            <program name="Settings">
+            </program> -->
+            <program name="Joystick">
                 <arg flag="-ac" constant="@AIRCRAFT"/>
+                <arg flag="hobbyking.xml"/>
+            </program>
+            <program name="Gazebo"/>
+            <program name="Settings">
                 <arg flag="-g" constant="800x200-1000+300"/>
             </program>
         </session>
+        <!-- Session - Flight using a real drone -->
     </section>
 </control_panel>

@@ -400,6 +400,7 @@ void float_quat_integrate_fi(struct FloatQuat *q, struct FloatRates *omega, floa
 void float_quat_integrate(struct FloatQuat *q, struct FloatRates *omega, float dt)
 {
   const float no = FLOAT_RATES_NORM(*omega);
+
   if (no > FLT_MIN) {
     const float a  = 0.5 * no * dt;
     const float ca = cosf(a);
@@ -415,6 +416,11 @@ void float_quat_integrate(struct FloatQuat *q, struct FloatRates *omega, float d
     q->qx = dp * qi + ca * qx + dr * qy - dq * qz;
     q->qy = dq * qi - dr * qx + ca * qy + dp * qz;
     q->qz = dr * qi + dq * qx - dp * qy + ca * qz;
+    /*
+    printf("%f \t %f \t %f \t %f \t %f (no, a, ca, sa_ov_no, dt) [-] \n", no, a, ca, sa_ov_no, dt);
+    printf("%f \t %f \t %f (dp, dq, dr) [-] \n", dp, dq, dr);
+    printf("%f \t %f \t %f \t %f (qi, qx, qy, qz) [-] \n", q->qi, q->qx, q->qy, q->qz);
+    */ 
   }
 }
 
