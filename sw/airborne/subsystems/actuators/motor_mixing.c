@@ -92,6 +92,7 @@ static const int32_t yaw_coef[MOTOR_MIXING_NB_MOTOR]    = MOTOR_MIXING_YAW_COEF;
 static const int32_t thrust_coef[MOTOR_MIXING_NB_MOTOR] = MOTOR_MIXING_THRUST_COEF;
 
 struct MotorMixing motor_mixing;
+struct MotorCommands motor_commands; // [COMMENT] Rohan: added here for logs
 
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
@@ -211,6 +212,12 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
         roll_coef[i] * in_cmd[COMMAND_ROLL] +
         pitch_coef[i] * in_cmd[COMMAND_PITCH] +
         thrust_coef[i] * in_cmd[COMMAND_THRUST];
+
+      // [COMMENT] Rohan: added here for logs
+      motor_commands.roll[i] = roll_coef[i]*in_cmd[COMMAND_ROLL];
+      motor_commands.pitch[i] = pitch_coef[i]*in_cmd[COMMAND_PITCH];
+      motor_commands.yaw[i] = yaw_coef[i] * in_cmd[COMMAND_YAW];
+      motor_commands.thrust[i] = thrust_coef[i]*in_cmd[COMMAND_THRUST];
 
       /* compute the command with yaw for each motor to check how much it would saturate */
       tmp_cmd = motor_mixing.commands[i] + yaw_coef[i] * in_cmd[COMMAND_YAW];

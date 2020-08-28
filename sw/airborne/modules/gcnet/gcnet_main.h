@@ -30,6 +30,13 @@
 // paparazzi library with standard definitions
 #include "std.h" 
 
+// paparazzi-based libraries
+#include "math/pprz_algebra_float.h"
+
+#include "state.h"
+#include "autopilot.h"
+
+
 // Set the both "guidance_h" and "guidance_v" modules using the "module" mode
 // NOTE: Therefore, it automatically uses the guidance_*_module functions implemented here 
 #define GUIDANCE_H_MODE_MODULE_SETTING GUIDANCE_H_MODE_MODULE
@@ -69,7 +76,7 @@ extern float psi_net;
 // declare variables - attitude
 // -- quaternions
 extern struct FloatEulers att_euler_enu;
-extern struct FloatQuat att_quat; 
+extern struct FloatQuat att_quat;
 
 // desired position and yaw angle [-- MAKE SURE THAT THIS CAN BE SET FROM THE FLIGHT PLAN]
 extern float desired_X;
@@ -82,17 +89,22 @@ extern struct FloatQuat quat_ctrl_sp;
 extern struct FloatEulers euler_ctrl_sp;
 extern struct FloatRates omega_sp;
 
+// -- thrust percentage
+extern float thrust_pct_before;
+
 // control inputs (from receiver and own commands): 
-extern struct ctrl_struct {
+struct ctrl_struct {
 	// RC Inputs
-  struct Int32Eulers rc_sp;
+    struct Int32Eulers rc_sp;
 
 	// Output commanded attitude
-  struct Int32Eulers cmd;
+    struct Int32Eulers cmd;
 
 	// thrust pct
 	float thrust_pct; 
-} ctrl;
+};
+
+extern struct ctrl_struct ctrl;
 
 // GUIDANCE LOOPS: 
 // Implement own Horizontal loops: 

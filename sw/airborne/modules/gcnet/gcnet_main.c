@@ -28,11 +28,6 @@
 #include "modules/gcnet/gcnet_main.h"
 
 // paparazzi-based libraries
-#include "math/pprz_algebra_float.h"
-
-#include "state.h"
-#include "autopilot.h"
-
 #include "subsystems/radio_control.h"
 #include "subsystems/electrical.h"
 #include "subsystems/datalink/telemetry.h"
@@ -107,17 +102,11 @@ struct FloatQuat quat_ctrl_sp;
 struct FloatEulers euler_ctrl_sp;
 struct FloatRates omega_sp;
 
+// -- thrust percentage
+float thrust_pct_before;
+
 // control inputs (from receiver and own commands): 
-struct ctrl_struct {
-	// RC Inputs
-  struct Int32Eulers rc_sp;
-
-	// Output commanded attitude
-  struct Int32Eulers cmd;
-
-	// thrust pct
-	float thrust_pct; 
-} ctrl;
+struct ctrl_struct ctrl;
 
 // define tolerances (later when you reach final position)
 float tol = 0.3;
@@ -254,27 +243,28 @@ void gcnet_guidance(bool in_flight)
 	
 	// 2 -- propagate inner loop control: body thrust 
 	// -- simulated thrust percentage: 
-	ctrl.thrust_pct = control_nn[0]/(BEBOP_MASS*GRAVITY_ACC);
-	
+	thrust_pct_before = control_nn[0]/(BEBOP_MASS*GRAVITY_ACC);
+	/* 
 	printf("==============================================\n");
 	printf("%f %f (control_nn[0], pct (before))\n", control_nn[0], ctrl.thrust_pct);
 	printf("==============================================\n");
-	
+	*/
 	// -- real hovering thrust percentage is not at 0.5, therefore we need an adjustment 
-	if (ctrl.thrust_pct >= 0) // above m*g (if we consider interval [0, 2*m*g])
+	if (thrust_pct_before >= 0) // above m*g (if we consider interval [0, 2*m*g])
 	{
-		Bound(ctrl.thrust_pct, 0, 0.5);
-		ctrl.thrust_pct = GUIDANCE_V_NOMINAL_HOVER_THROTTLE + (1 - GUIDANCE_V_NOMINAL_HOVER_THROTTLE)/(0.5 - 0)*ctrl.thrust_pct;
+		Bound(thrust_pct_before, 0, 0.5);
+		ctrl.thrust_pct = GUIDANCE_V_NOMINAL_HOVER_THROTTLE + (1 - GUIDANCE_V_NOMINAL_HOVER_THROTTLE)/(0.5 - 0)*thrust_pct_before;
 	}
 	else // below m*g (if we consider interval [0, 2*m*g])
 	{
-		Bound(ctrl.thrust_pct, -0.5, 0);
-		ctrl.thrust_pct = (GUIDANCE_V_NOMINAL_HOVER_THROTTLE - 0)/(0.5 - 0)*(-ctrl.thrust_pct);
+		Bound(thrust_pct_before, -0.5, 0);
+		ctrl.thrust_pct = (GUIDANCE_V_NOMINAL_HOVER_THROTTLE - 0)/(0.5 - 0)*(-thrust_pct_before);
 	}		
-	
+	/* 
 	printf("==============================================\n");
 	printf("%f %f (control_nn[0], pct (after))\n", control_nn[0], ctrl.thrust_pct);
 	printf("==============================================\n");
+	*/
 	
 	int32_t thrust_int = ctrl.thrust_pct * MAX_PPRZ; // see how to transform this! 
 
@@ -311,6 +301,7 @@ void gcnet_guidance(bool in_flight)
 	stabilization_attitude_set_rpy_setpoint_i(&(ctrl.cmd));
 	stabilization_attitude_run(in_flight);
 
+	/* 
 	printf("==============================================\n");
 	printf("%f \t %f \t %f \t %f (p_cmd, q_cmd, r_cmd, f_per) [rad/s] \n", omega_sp.p, omega_sp.q, omega_sp.r, (float) PERIODIC_FREQUENCY);
 	printf("%f \t %f \t %f \t %f (qi_cmd, qx_cmd, qy_cmd, qz_cmd) [-] \n", quat_ctrl_sp.qi, quat_ctrl_sp.qx, quat_ctrl_sp.qy, quat_ctrl_sp.qz);
@@ -318,6 +309,7 @@ void gcnet_guidance(bool in_flight)
 	printf("%d \t %d \t %d (phi_cmd, theta_cmd, psi_cmd) [int] \n", ctrl.cmd.phi, ctrl.cmd.theta, ctrl.cmd.psi);
 	printf("%d \t %d \t %d \t %d (thrust, roll, pitch, yaw) [int] \n", stabilization_cmd[COMMAND_THRUST], stabilization_cmd[COMMAND_ROLL], stabilization_cmd[COMMAND_PITCH], stabilization_cmd[COMMAND_YAW]);
 	printf("==============================================\n");
+	*/ 
 		
 	// -- if drone within the final region, then return True and switch to another controller
 	/* 
