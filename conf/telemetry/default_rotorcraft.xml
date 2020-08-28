@@ -27,7 +27,7 @@
       <message name="SURVEY"                   period="2.5"/>
       <message name="OPTIC_FLOW_EST"           period="0.05"/>
       <message name="VECTORNAV_INFO"           period="0.5"/>
-      <message name="OPTICAL_FLOW_HOVER"       period="0.05"/>
+      <message name="OPTICAL_FLOW_HOVER"       period="0.05"/> <!-- [COMMENT] Rohan: This module is also here - it is a good example -->
       <message name="VISUALTARGET"             period="0.10"/>
       <message name="VISION_POSITION_ESTIMATE" period="0.1"/>
       <message name="DIVERGENCE"               period="0.05"/>
@@ -35,6 +35,7 @@
       <message name="LOGGER_STATUS"            period="5.1"/>
       <message name="LIDAR"                    period="1.2"/>
       <message name="INS_EKF2"                 period=".25"/>
+      <message name="GCNET_MAIN"               period="0.01"/> <!-- [COMMENT] Rohan: Added this for real-time logging / telemetry -->
     </mode>
 
     <mode name="ppm">
