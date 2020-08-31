@@ -24,41 +24,21 @@
  * lower-level control loops.  Based in the "ctrl_module_outerloop_demo" files.
  */
 
-#ifndef GCNET_MAIN_H
-#define GCNET_MAIN_H
+#ifndef GCNET_MAIN_V2_H
+#define GCNET_MAIN_V2_H
 
 // paparazzi library with standard definitions
 #include "std.h" 
 
 // paparazzi-based libraries
 #include "math/pprz_algebra_float.h"
-
-#include "state.h"
-
-
-// Set the both "guidance_h" and "guidance_v" modules using the "module" mode
-// NOTE: Therefore, it automatically uses the guidance_*_module functions implemented here 
-#define GUIDANCE_H_MODE_MODULE_SETTING GUIDANCE_H_MODE_MODULE
-
-#define GUIDANCE_V_MODE_MODULE_SETTING GUIDANCE_V_MODE_MODULE
+#include "math/pprz_algebra_int.h"
 
 // user-made libraries with:
 // -- functions for nn operations
 #include "modules/gcnet/nn_operations.h"
 // -- variables with nn parameters (weights, biases and other information about the nets)
 // #include "modules/gcnet/nn_parameters.h" // -- already in "nn_operations.h"
-
-// control inputs (from receiver and own commands): 
-struct ctrl_struct {
-	// RC Inputs
-  struct Int32Eulers rc_sp;
-
-	// Output commanded attitude
-  struct FloatRates omega_sp;
-
-	// thrust pct
-	float thrust_pct; 
-};
 
 /* --- 
 Variables declared here because of logs -- go to "file_logger.c" in modules/loggers/file_logger.c
@@ -77,27 +57,16 @@ extern float nn_process_time;
 
 // declare variables - position and velocity
 // -- optitrack:
-extern struct FloatVect3 pos_OT, vel_OT;
-// -- NED frame: 
-extern struct FloatVect3 pos_NED, vel_NED;
-// -- NWU frame: 
-extern struct FloatVect3 pos_NWU, vel_NWU;
-extern struct FloatVect2 delta_pos_NWU;
-// -- network's frame (intermediate frame) 
-extern struct FloatVect2 delta_pos_net; // position
-extern struct FloatVect2 vel_net; // velocity
+extern struct FloatVect3 pos_enu, vel_enu;
+
+// -- network's frame 
+extern struct FloatVect2 delta_pos_enu; // position
 extern float psi_net;
 
-// -- rotational matrices  
-extern struct FloatRMat R_OT_2_NED, R_NED_2_NWU;
-extern struct FloatEulers eulers_OT_2_NED;
-extern struct FloatEulers eulers_NED_2_NWU; // NED reference frame rolls PI radians to become NWU
-
-// declare variables - vehicle's attitude
-// -- Eulers
-extern struct FloatEulers att_euler_NED, att_euler_NWU;
+// declare variables - attitude
 // -- quaternions
-extern struct FloatQuat att_quat; 
+extern struct FloatEulers att_euler_enu;
+extern struct FloatQuat att_quat;
 
 // desired position and yaw angle [-- MAKE SURE THAT THIS CAN BE SET FROM THE FLIGHT PLAN]
 extern float desired_X;
@@ -105,23 +74,19 @@ extern float desired_Y;
 extern float desired_Z; 
 extern float desired_psi;
 
-// control inputs (from RC or NN): 
+// control inputs (from receiver and own commands): 
+struct ctrl_struct {
+	// RC Inputs
+  struct Int32Eulers rc_sp;
+
+	// Output commanded attitude
+  struct FloatRates omega_sp;
+};
+
 extern struct ctrl_struct ctrl;
-extern float thrust_pct_before;
 
-// define tolerances (later when you reach final position)
-// extern float tol;
-
-// GUIDANCE LOOPS: 
-// Implement own Horizontal loops: 
-extern void guidance_h_module_init(void);
-extern void guidance_h_module_enter(void);
-extern void guidance_h_module_read_rc(void);
-extern void guidance_h_module_run(bool in_flight);
-
-// Implement own Vertical loops - even though we don't use them 
-extern void guidance_v_module_init(void);
-extern void guidance_v_module_enter(void);
-extern void guidance_v_module_run(bool in_flight);
+// module functions
+void gcnet_init(void);
+void gcnet_ctrl(void);
 
 #endif

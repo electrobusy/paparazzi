@@ -163,6 +163,9 @@ void stabilization_rate_read_rc_switched_sticks(void)
  */
 void stabilization_rate_run(bool in_flight)
 {
+	printf("==============================================\n");
+	printf("Não entraste aqui, crl!\n");
+	printf("==============================================\n");
   /* compute the INDI rate command */
   stabilization_indi_rate_run(stabilization_rate_sp, in_flight);
 }

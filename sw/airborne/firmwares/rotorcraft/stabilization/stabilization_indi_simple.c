@@ -296,6 +296,12 @@ void stabilization_indi_rate_run(struct FloatRates rate_sp, bool in_flight __att
   filter_pqr(indi.u, &indi.u_act_dyn);
   filter_pqr(indi.rate, body_rates);
 
+  /*
+  printf("==============================================\n");
+	printf("%f \t %f \t %f (q_nn,p_nn,r_nn) \n", rate_sp.p, rate_sp.q, rate_sp.r);
+	printf("==============================================\n");
+  */ 
+ 
   // Calculate the derivative of the rates
   finite_difference_from_filter(indi.rate_d, indi.rate);
 
@@ -322,7 +328,11 @@ void stabilization_indi_rate_run(struct FloatRates rate_sp, bool in_flight __att
   indi.angular_accel_ref.p = (rate_sp.p - rates_filt_fo.p) * indi.gains.rate.p;
   indi.angular_accel_ref.q = (rate_sp.q - rates_filt_fo.q) * indi.gains.rate.q;
   indi.angular_accel_ref.r = (rate_sp.r - rates_filt_fo.r) * indi.gains.rate.r;
-
+  /* 
+  printf("==============================================\n");
+	printf("%f \t %f \t %f (alpha_p,alpha_q,alpha_r) \n", indi.angular_accel_ref.p, indi.angular_accel_ref.q, indi.angular_accel_ref.r);
+	printf("==============================================\n");
+  */
   //Increment in angular acceleration requires increment in control input
   //G1 is the control effectiveness. In the yaw axis, we need something additional: G2.
   //It takes care of the angular acceleration caused by the change in rotation rate of the propellers

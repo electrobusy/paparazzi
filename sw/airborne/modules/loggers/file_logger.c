@@ -50,6 +50,7 @@
 #include "firmwares/rotorcraft/stabilization/stabilization_indi_simple.h" // -- INDI
 #include "subsystems/actuators/motor_mixing.h" // -- Motor Mixing
 #include "subsystems/imu.h" // -- IMU
+#include "autopilot.h"
 
 /** Set the default File logger path to the USB drive */
 #ifndef FILE_LOGGER_PATH
@@ -68,8 +69,10 @@ static FILE *file_logger = NULL;
  * line.
  * @param file Log file pointer
  */
-static void file_logger_write_header(FILE *file) { // [COMMENT] Rohan: I made changes in this file
+static void file_logger_write_header(FILE *file) {
+  
   fprintf(file, "time,");
+  
   // > Logs from body - In NED frame:
   fprintf(file, "pos_x_NED,pos_y_NED,pos_z_NED,");
   fprintf(file, "vel_x_NED,vel_y_NED,vel_z_NED,");
@@ -77,19 +80,29 @@ static void file_logger_write_header(FILE *file) { // [COMMENT] Rohan: I made ch
   fprintf(file, "att_phi_NED,att_theta_NED,att_psi_NED,");
   fprintf(file, "att_qi_NED,att_qx_NED,att_qy_NED,att_qz_NED,");
   fprintf(file, "rate_p_NED,rate_q_NED,rate_r_NED,");
+  
   // > Neural Network file - Logs: [MY FILE]
   // -- post-processing time: 
   fprintf(file, "NN_pp_time,");
   // -- body state variables:
-  fprintf(file, "pos_x_ENU,pos_y_ENU,pos_z_ENU,");
-  fprintf(file, "vel_x_ENU,vel_y_ENU,vel_z_ENU,");
-  fprintf(file, "att_phi_ENU,att_theta_ENU,att_psi_ENU,");
-  fprintf(file, "att_qi_ENU,att_qx_ENU,att_qy_ENU,att_qz_ENU,");
-  fprintf(file, "rate_p_ENU,rate_q_ENU,rate_r_ENU,");
+  // -- body state variables - OT:
+  fprintf(file, "pos_x_OT,pos_y_OT,pos_z_OT,");
+  fprintf(file, "vel_x_OT,vel_y_OT,vel_z_OT,");
+  // -- body state variables - NED:
+  fprintf(file, "pos_x_NED_v2,pos_y_NED_v2,pos_z_NED_v2,");
+  fprintf(file, "vel_x_NED_v2,vel_y_NED_v2,vel_z_NED_v2,");
+  fprintf(file, "att_phi_NED_v2,att_theta_NED_v2,att_psi_NED_v2,");
+  // -- body state variables - NWU:
+  fprintf(file, "pos_x_NWU,pos_y_NWU,pos_z_NWU,");
+  fprintf(file, "vel_x_NWU,vel_y_NWU,vel_z_NWU,");
+  fprintf(file, "att_phi_NWU,att_theta_NWU,att_psi_NWU,");
+  fprintf(file, "att_qi_NWU,att_qx_NWU,att_qy_NWU,att_qz_NWU,");
+  fprintf(file, "rate_p_NWU,rate_q_NWU,rate_r_NWU,");
   // -- desired position and yaw angle: 
-  fprintf(file, "des_pos_x_ENU,des_pos_y_ENU,des_pos_z_ENU,des_pos_psi_ENU,");
+  fprintf(file, "des_pos_x_NWU,des_pos_y_NWU,des_pos_z_NWU,des_pos_psi_NWU,");
   // -- delta position - ENU and Network (intermediate) frames
-  fprintf(file, "d_pos_x_ENU,d_pos_y_ENU,d_pos_x_net,d_pos_y_net,");
+  fprintf(file, "d_pos_x_NWU,d_pos_y_NWU,");
+  fprintf(file, "d_pos_x_net,d_pos_y_net,");
   // -- velocity and yaw angle in Network frame
   fprintf(file, "v_x_net,v_y_net,yaw_net,");
   // -- Neural Network - inputs (states):
@@ -97,14 +110,11 @@ static void file_logger_write_header(FILE *file) { // [COMMENT] Rohan: I made ch
   // -- Neural Network - outputs (controls):
   fprintf(file, "T_nn,");
   fprintf(file, "p_nn,q_nn,r_nn,");
-  // -- Thrust percentage: 
-  fprintf(file, "T_pct,"); // before conversion
-  fprintf(file, "T_pct_conv,"); // after conversion
-  // > Attitude commands - from rate integration (Christophe's suggestion):
-  fprintf(file, "qi_cmd,qx_cmd,qy_cmd,qz_cmd,");
-  fprintf(file, "phi_cmd,theta_cmd,psi_cmd,");
+  fprintf(file, "T_pct,");
+  
   // > Lower level control - INDI controller: 
   fprintf(file, "INDI_p_dot_ref,INDI_q_dot_ref,INDI_r_dot_ref,"); // [ADD MORE VARIABLES LATER]
+  
   // > Lower level controls - Rotors Mixing Module: 
   // -- Motor Mixing commands:
   fprintf(file, "motor_cmd_1,motor_cmd_2,motor_cmd_3,motor_cmd_4,");
@@ -118,9 +128,13 @@ static void file_logger_write_header(FILE *file) { // [COMMENT] Rohan: I made ch
   fprintf(file, "motor_cmd_pitch_1,motor_cmd_pitch_2,motor_cmd_pitch_3,motor_cmd_pitch_4,");
   // -- Motor Commands - Yaw:
   fprintf(file, "motor_cmd_yaw_1,motor_cmd_yaw_2,motor_cmd_yaw_3,motor_cmd_yaw_4,");
+  
   // > IMU accelerations: 
   fprintf(file, "IMU_ax,IMU_ay,IMU_az,");
   // [ADD MORE - IN THE END]
+
+  // > Auto-pilot mode: 
+  fprintf(file, "Auto-Pilot Mode,");
 #ifdef COMMAND_THRUST
   fprintf(file, "cmd_thrust,cmd_roll,cmd_pitch,cmd_yaw\n");
 #else
@@ -134,8 +148,10 @@ static void file_logger_write_header(FILE *file) { // [COMMENT] Rohan: I made ch
  * end of the line.
  * @param file Log file pointer
  */
-static void file_logger_write_row(FILE *file) { // [COMMENT] Rohan: I made changes in this file
+static void file_logger_write_row(FILE *file) {
   
+  fprintf(file, "%f,", get_sys_time_float());
+
   // > Logs from body - In NED frame:
   struct NedCoor_f *pos = stateGetPositionNed_f(); 
   struct NedCoor_f *vel = stateGetSpeedNed_f(); 
@@ -144,7 +160,6 @@ static void file_logger_write_row(FILE *file) { // [COMMENT] Rohan: I made chang
   struct FloatQuat *att_q = stateGetNedToBodyQuat_f();
   struct FloatRates *rates = stateGetBodyRates_f();
 
-  fprintf(file, "%f,", get_sys_time_float());
   fprintf(file, "%f,%f,%f,", pos->x, pos->y, pos->z);
   fprintf(file, "%f,%f,%f,", vel->x, vel->y, vel->z);
   fprintf(file, "%f,%f,%f,", acc->x, acc->y, acc->z);
@@ -155,16 +170,24 @@ static void file_logger_write_row(FILE *file) { // [COMMENT] Rohan: I made chang
   // > Neural Network file - Logs: [MY FILE]
   // -- post-processing time: 
   fprintf(file, "%f,", nn_process_time);
-  // -- body state variables:
-  fprintf(file, "%f,%f,%f,", pos_enu.x, pos_enu.y, pos_enu.z);
-  fprintf(file, "%f,%f,%f,", vel_enu.x, vel_enu.y, vel_enu.z);
-  fprintf(file, "%f,%f,%f,", att_euler_enu.phi, att_euler_enu.theta, att_euler_enu.psi); 
-  fprintf(file, "%f,%f,%f,%f,", att_quat.qi, att_quat.qx,att_quat.qy,att_quat.qz); 
+  // -- body state variables - OT:
+  fprintf(file, "%f,%f,%f,", pos_OT.x, pos_OT.y, pos_OT.z);
+  fprintf(file, "%f,%f,%f,", vel_OT.x, vel_OT.y, vel_OT.z); 
+  // -- body state variables - NED:
+  fprintf(file, "%f,%f,%f,", pos_NED.x, pos_NED.y, pos_NED.z);
+  fprintf(file, "%f,%f,%f,", vel_NED.x, vel_NED.y, vel_NED.z);
+  fprintf(file, "%f,%f,%f,", att_euler_NED.phi, att_euler_NED.theta, att_euler_NED.psi); 
+  // -- body state variables - NWU:
+  fprintf(file, "%f,%f,%f,", pos_NWU.x, pos_NWU.y, pos_NWU.z);
+  fprintf(file, "%f,%f,%f,", vel_NWU.x, vel_NWU.y, vel_NWU.z);
+  fprintf(file, "%f,%f,%f,", att_euler_NWU.phi, att_euler_NWU.theta, att_euler_NWU.psi); 
+  fprintf(file, "%f,%f,%f,%f,", att_quat.qi, att_quat.qx, att_quat.qy, att_quat.qz); 
   fprintf(file, "%f,%f,%f,", rates->p, -rates->q, -rates->r); 
   // -- desired position and yaw angle: 
   fprintf(file, "%f,%f,%f,%f,", desired_X, desired_Y, desired_Z, desired_psi); 
-  // -- delta position - ENU and Network (intermediate) frames
-  fprintf(file, "%f,%f,%f,%f,", delta_pos_enu.x, delta_pos_enu.y, delta_pos_net.x, delta_pos_net.y); 
+  // -- delta position - NWU and Network (intermediate) frames
+  fprintf(file, "%f,%f,", delta_pos_NWU.x, delta_pos_NWU.y); 
+  fprintf(file, "%f,%f,", delta_pos_net.x, delta_pos_net.y); 
   // -- velocity and yaw angle in Network frame
   fprintf(file, "%f,%f,%f,", vel_net.x, vel_net.y, psi_net);
   // -- Neural Network - inputs (states):
@@ -173,13 +196,11 @@ static void file_logger_write_row(FILE *file) { // [COMMENT] Rohan: I made chang
   fprintf(file, "%f,", control_nn[0]);
   fprintf(file, "%f,%f,%f,", control_nn[1], control_nn[2], control_nn[3]);
   // -- Thrust percentage: 
-  fprintf(file, "%f,", thrust_pct_before); // before conversion
-  fprintf(file, "%f,", ctrl.thrust_pct); // after conversion
-  // > Attitude commands - from rate integration (Christophe's suggestion):
-  fprintf(file, "%f,%f,%f,%f,", quat_ctrl_sp.qi, quat_ctrl_sp.qx, quat_ctrl_sp.qy, quat_ctrl_sp.qz);
-  fprintf(file, "%f,%f,%f,", euler_ctrl_sp.phi, euler_ctrl_sp.theta, euler_ctrl_sp.theta);
+  fprintf(file, "%f,", ctrl.thrust_pct);
+
   // > Lower level control - INDI controller: 
   fprintf(file, "%f,%f,%f,", indi.angular_accel_ref.p, indi.angular_accel_ref.q, indi.angular_accel_ref.r); // [ADD MORE VARIABLES LATER]
+  
   // > Lower level controls - Rotors Mixing Module: 
   // -- Motor Mixing commands:
   fprintf(file, "%d,%d,%d,%d,", motor_mixing.commands[0], motor_mixing.commands[1], motor_mixing.commands[2], motor_mixing.commands[3]);
@@ -193,8 +214,12 @@ static void file_logger_write_row(FILE *file) { // [COMMENT] Rohan: I made chang
   fprintf(file, "%d,%d,%d,%d,", motor_commands.pitch[0], motor_commands.pitch[1], motor_commands.pitch[2], motor_commands.pitch[3]);
   // -- Motor Commands - Yaw:
   fprintf(file, "%d,%d,%d,%d,", motor_commands.yaw[0], motor_commands.yaw[1], motor_commands.yaw[2], motor_commands.yaw[3]);
+  
   // > IMU accelerations: 
-  fprintf(file, "%d,%d,%d,", imu.accel.x, imu.accel.y, imu.accel.z);
+  fprintf(file, "%f,%f,%f,", ACCEL_FLOAT_OF_BFP(imu.accel.x), ACCEL_FLOAT_OF_BFP(imu.accel.y), ACCEL_FLOAT_OF_BFP(imu.accel.z));
+  
+  // > Auto-pilot mode: 
+  fprintf(file, "%d,", autopilot.mode);
   // [ADD MORE - IN THE END]
 #ifdef COMMAND_THRUST
   fprintf(file, "%d,%d,%d,%d\n",
