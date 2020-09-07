@@ -50,7 +50,6 @@
             </program>
             <program name="Real-time Plotter"> 
                 <arg flag="-g" constant="750x250-0+0"/> <!-- "-g" flag specifies -->
-<<<<<<< HEAD
                 <arg flag="-t" constant="POSITION_NWU"/> <!-- "-t" flag gives a title -->
                 <arg flag="-u" constant="0.10"/> <!-- "-u" flag updates the time -->
                 <arg flag="-c" constant="0.00"/> <!-- first "-c" flag allows us to start the plot with given value, in this case, 0.00 -->
@@ -109,64 +108,6 @@
                 <arg flag="-c" constant="0.00"/> 
                 <arg flag="-c" constant="*:telemetry:GCNET_MAIN:r_nwu"/> 
                 <arg flag="-c" constant="*:telemetry:GCNET_MAIN:r_nn"/>
-=======
-                <arg flag="-t" constant="POSITION_ENU"/> <!-- "-t" flag gives a title -->
-                <arg flag="-u" constant="0.05"/> <!-- "-u" flag updates the time -->
-                <arg flag="-c" constant="0.00"/> <!-- first "-c" flag allows us to start the plot with given value, in this case, 0.00 -->
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:x_enu"/> <!-- "-c" flag also let's us choose the variable to plot -->
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:y_enu"/>
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:z_enu"/>
-                <arg flag="-n"/> <!-- "-n" flag opens new window -->
-                <arg flag="-g" constant="750x250-0+250"/>
-                <arg flag="-t" constant="VELOCITY_ENU"/>
-                <arg flag="-u" constant="0.05"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:vx_enu"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:vy_enu"/>
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:vz_enu"/>
-                <arg flag="-n"/> <!-- "-n" flag opens new window -->
-                <arg flag="-g" constant="750x250-800+0"/>
-                <arg flag="-t" constant="THRUST"/>
-                <arg flag="-u" constant="0.05"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:T_nn_pct"/> 
-                <arg flag="-n"/> <!-- "-n" flag opens new window -->
-                <arg flag="-g" constant="750x250-800+250"/>
-                <arg flag="-t" constant="P-Q-R"/>
-                <arg flag="-u" constant="0.05"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:p_nn"/>
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:q_nn"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:r_nn"/>  
-                <arg flag="-n"/> <!-- "-n" flag opens new window -->
-                <arg flag="-g" constant="750x250-0+500"/>
-                <arg flag="-t" constant="ATTITUDE_PHI_ENU"/>
-                <arg flag="-u" constant="0.05"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:phi_enu"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:phi_cmd"/>
-                <arg flag="-n"/> <!-- "-n" flag opens new window -->
-                <arg flag="-g" constant="750x250-800+500"/>
-                <arg flag="-t" constant="ATTITUDE_THETA_ENU"/>
-                <arg flag="-u" constant="0.05"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:theta_enu"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:theta_cmd"/>
-                <arg flag="-n"/> <!-- "-n" flag opens new window -->
-                <arg flag="-g" constant="750x250-0+750"/>
-                <arg flag="-t" constant="ATTITUDE_PSI_ENU"/>
-                <arg flag="-u" constant="0.05"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="0.00"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:psi_enu"/> 
-                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:psi_cmd"/>
->>>>>>> 2d03568e4d8de7d8b185b37586ec3da1cf503560
             </program>
             <!--
             <program name="Settings">

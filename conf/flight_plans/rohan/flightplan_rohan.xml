@@ -75,10 +75,7 @@
     </sector>
   </sectors>
 
-<<<<<<< HEAD
   <!-- In case anything goes wrong, define exceptions, so then the drone can be recovered -->
-=======
->>>>>>> 2d03568e4d8de7d8b185b37586ec3da1cf503560
   <exceptions>
     <!-- RC lost -->
     <!--exception cond="((radio_control.status == RC_REALLY_LOST) &&
@@ -172,7 +169,6 @@
       <call_once fun="NavKillThrottle()"/>
       <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
     </block>
-<<<<<<< HEAD
     <!-- My own blocks -->
     <block name="WP1_heading">
       <call_once fun="nav_set_heading_deg(0)"/>
@@ -188,7 +184,3 @@
     </block>
   </blocks>
 </flight_plan>
-=======
-  </blocks>
-</flight_plan>
->>>>>>> 2d03568e4d8de7d8b185b37586ec3da1cf503560
