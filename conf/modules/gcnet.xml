@@ -8,11 +8,19 @@
   </doc>
 
   <header>
+<<<<<<< HEAD
     <file name="nn_parameters.h"/>
     <file name="nn_operations.h"/>
     <file name="gcnet_main.h"/>
   </header>
 
+=======
+    <file name="gcnet_main.h"/>
+    <file name="nn_parameters.h"/>
+    <file name="nn_operations.h"/>
+  </header>
+  
+>>>>>>> 2d03568e4d8de7d8b185b37586ec3da1cf503560
   <makefile>
     <file name="nn_parameters.c"/>
     <file name="nn_operations.c"/>
