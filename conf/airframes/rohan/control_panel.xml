@@ -151,7 +151,6 @@
             </program>
         </session>
         <!-- Session - Flight using a real drone -->
-<<<<<<< HEAD
         <session name="Flight UDP - Optitrack + Joystick">
             <program name="Data Link">
                 <arg flag="-d" constant="/dev/ttyUSB0"/>
@@ -236,7 +235,5 @@
                 <arg flag="-g" constant="800x200-1000+300"/>
             </program>
         </session>
-=======
->>>>>>> 2d03568e4d8de7d8b185b37586ec3da1cf503560
     </section>
 </control_panel>
