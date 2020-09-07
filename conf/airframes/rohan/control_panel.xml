@@ -151,5 +151,89 @@
             </program>
         </session>
         <!-- Session - Flight using a real drone -->
+        <session name="Flight UDP - Optitrack + Joystick">
+            <program name="Data Link">
+                <arg flag="-d" constant="/dev/ttyUSB0"/>
+                <arg flag="-udp"/>
+            </program>
+            <program name="Server"/>
+            <program name="Joystick" command="sw/ground_segment/joystick/input2ivy">
+                <arg flag="-ac" constant="@AIRCRAFT"/>
+                <arg flag="hobbyking.xml"/>
+                <arg flag="-d 0"/>
+            </program>
+            <program name="GCS"/>
+            <program name="NatNet" command="sw/ground_segment/misc/natnet2ivy">
+                <arg flag="-ac 9999" constant="@AC_ID"/>
+            </program>
+            <program name="Messages">
+                <arg flag="-g" constant="300x300-1000+600"/>
+            </program>
+            <program name="Real-time Plotter"> 
+                <arg flag="-g" constant="750x250-0+0"/> <!-- "-g" flag specifies -->
+                <arg flag="-t" constant="POSITION_NWU"/> <!-- "-t" flag gives a title -->
+                <arg flag="-u" constant="0.10"/> <!-- "-u" flag updates the time -->
+                <arg flag="-c" constant="0.00"/> <!-- first "-c" flag allows us to start the plot with given value, in this case, 0.00 -->
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:x_nwu"/> <!-- "-c" flag also let's us choose the variable to plot -->
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:y_nwu"/>
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:z_nwu"/>
+                <arg flag="-n"/> <!-- "-n" flag opens new window -->
+                <arg flag="-g" constant="750x250-0+250"/>
+                <arg flag="-t" constant="VELOCITY_NWU"/>
+                <arg flag="-u" constant="0.10"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:vx_nwu"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:vy_nwu"/>
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:vz_nwu"/>
+                <arg flag="-n"/> <!-- "-n" flag opens new window -->
+                <arg flag="-g" constant="750x250-800+0"/>
+                <arg flag="-t" constant="THRUST"/>
+                <arg flag="-u" constant="0.10"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:az_nn_model"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:az_nn_drone"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:az_imu"/> 
+                <arg flag="-n"/> <!-- "-n" flag opens new window -->
+                <arg flag="-g" constant="750x250-800+250"/>
+                <arg flag="-t" constant="ATTITUDE_NWU"/>
+                <arg flag="-u" constant="0.10"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:phi_nwu"/>
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:theta_nwu"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:psi_nwu"/>  
+                <arg flag="-n"/> <!-- "-n" flag opens new window -->
+                <arg flag="-g" constant="750x250-0+500"/>
+                <arg flag="-t" constant="p"/>
+                <arg flag="-u" constant="0.10"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:p_nwu"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:p_nn"/>
+                <arg flag="-n"/> <!-- "-n" flag opens new window -->
+                <arg flag="-g" constant="750x250-800+500"/>
+                <arg flag="-t" constant="q"/>
+                <arg flag="-u" constant="0.10"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:q_nwu"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:q_nn"/>
+                <arg flag="-n"/> <!-- "-n" flag opens new window -->
+                <arg flag="-g" constant="750x250-0+750"/>
+                <arg flag="-t" constant="r"/>
+                <arg flag="-u" constant="0.10"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="0.00"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:r_nwu"/> 
+                <arg flag="-c" constant="*:telemetry:GCNET_MAIN:r_nn"/>
+            </program>
+            <program name="Settings">
+                <arg flag="-ac" constant="@AIRCRAFT"/>
+                <arg flag="-g" constant="800x200-1000+300"/>
+            </program>
+        </session>
     </section>
 </control_panel>

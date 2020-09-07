@@ -30,8 +30,8 @@ extern const float out_scale_min[NUM_CONTROLS];
 
 extern const float out_scale_max[NUM_CONTROLS];
 
-extern const float weights_hidden[NUM_HIDDEN_LAYERS-1][NUM_NODES][NUM_NODES];
+extern const float weights_hid[NUM_HIDDEN_LAYERS-1][NUM_NODES][NUM_NODES];
 
-extern const float bias_hidden[NUM_HIDDEN_LAYERS-1][NUM_NODES];
+extern const float bias_hid[NUM_HIDDEN_LAYERS-1][NUM_NODES];
 
 #endif

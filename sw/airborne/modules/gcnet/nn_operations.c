@@ -3,21 +3,21 @@
 /*
 Function: Pre-process inputs (normalization layer)
 */
-void preprocess_input(float* input, float* input_norm)
+void preprocess_input(float *input, float *input_norm, const float *input_norm_mean, const float *input_norm_std)
 {   
     int idx;
 
     for(idx = 0; idx < NUM_STATES; idx++)
     {
         // normalize the states   
-        input_norm[idx] = (input[idx] - in_norm_mean[idx])/in_norm_std[idx];
+        input_norm[idx] = (input[idx] - input_norm_mean[idx])/input_norm_std[idx];
     }
 }
 
 /*
 Function: Post-process outputs (unscaling and unormalization layers)
 */
-void postprocess_output(float* output)
+void postprocess_output(float *output, const float *output_scale_min, const float *output_scale_max, const float *output_norm_mean, const float *output_norm_std)
 {
     int idx;
     float slope;
@@ -26,18 +26,18 @@ void postprocess_output(float* output)
     for(idx = 0; idx < NUM_CONTROLS; idx++)
     {
         // unscale from [-1,1] to the normalized interval [control_min, control_max]
-        slope = (out_scale_max[idx] - out_scale_min[idx])/(1 - (-1));
-        out_unscaled = slope*(output[idx] - (-1)) + out_scale_min[idx];
+        slope = (output_scale_max[idx] - output_scale_min[idx])/(1 - (-1));
+        out_unscaled = slope*(output[idx] - (-1)) + output_scale_min[idx];
 
         // unormalize from [control_min, control_max] to the real interval [u_min, u_max]
-        output[idx] = out_unscaled*out_norm_std[idx] + out_norm_mean[idx];
+        output[idx] = out_unscaled*output_norm_std[idx] + output_norm_mean[idx];
     }
 }
 
 /*
 Function: Tanh layer operation
 */
-void tanh_activation(float* vec, int numNodes)
+void tanh_activation(float *vec, int numNodes)
 {
     int idx_nodes;
 
@@ -50,7 +50,7 @@ void tanh_activation(float* vec, int numNodes)
 /*
 Function: Softplus layer operation
 */
-void softplus_activation(float* vec, int numNodes)
+void softplus_activation(float *vec, int numNodes)
 {
     int idx_nodes;
 
@@ -63,7 +63,7 @@ void softplus_activation(float* vec, int numNodes)
 /*
 Function: Operations in a fully connected layer
 */
-void fully_connected_layer(float* in, float* out, const float* weight_ptr, const float* bias_ptr, int dim_curr_layer, int dim_next_layer)
+void fully_connected_layer(float *in, float *out, const float *weight_ptr, const float *bias_ptr, int dim_curr_layer, int dim_next_layer)
 {
     // index i - rows of the weight matrix 
     // index j - columns of the weight matrix 
@@ -87,7 +87,7 @@ void fully_connected_layer(float* in, float* out, const float* weight_ptr, const
 /*
 Function: Copy vector
 */ 
-void copy_vec(float* vec_1, float* vec_2, int len_vec_1)
+void copy_vec(float *vec_1, float *vec_2, int len_vec_1)
 {
     for(int i = 0; i < len_vec_1; i++)
     {
@@ -98,7 +98,7 @@ void copy_vec(float* vec_1, float* vec_2, int len_vec_1)
 /*
 Function: Neural network prediction
 */
-void nn_predict(float* nn_input, float* nn_output)
+void nn_predict(float *nn_input, float *nn_output, const float (*weights_input)[NUM_STATES], const float *bias_input, const float weights_hidden[NUM_HIDDEN_LAYERS-1][NUM_NODES][NUM_NODES], const float (*bias_hidden)[NUM_NODES], const float (*weights_output)[NUM_NODES], const float *bias_output)
 {   
     int i; 
 
@@ -106,8 +106,8 @@ void nn_predict(float* nn_input, float* nn_output)
     const float* ptr_bias = NULL;
 
     // fully connected layer
-    ptr_weights = &weights_in[0][0];
-    ptr_bias = &bias_in[0];
+    ptr_weights = &weights_input[0][0];
+    ptr_bias = &bias_input[0];
 
     float aux_vec[NUM_NODES];
     float aux_vec_hidden[NUM_NODES];
@@ -133,8 +133,8 @@ void nn_predict(float* nn_input, float* nn_output)
     }
 
     // fully connected layer
-    ptr_weights = &weights_out[0][0];
-    ptr_bias = &bias_out[0];
+    ptr_weights = &weights_output[0][0];
+    ptr_bias = &bias_output[0];
     fully_connected_layer(aux_vec, nn_output, ptr_weights, ptr_bias, num_nodes_vec[i], num_nodes_vec[i+1]);
     
     // tanh activation 
@@ -150,11 +150,11 @@ void nn_control(float* state, float* control)
     float state_norm[NUM_STATES];
 
     // 1 - pre-processing input
-    preprocess_input(state, state_norm);
+    preprocess_input(state, state_norm, in_norm_mean, in_norm_std);
 
     // 2 - neural network prediction
-    nn_predict(state_norm, control);
+    nn_predict(state_norm, control, weights_in, bias_in, weights_hid, bias_hid, weights_out, bias_out);
     
     // 3 - post-processing output
-    postprocess_output(control);
+    postprocess_output(control, out_scale_min, out_scale_max, out_norm_mean, out_norm_std);
 }

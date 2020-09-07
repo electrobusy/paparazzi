@@ -550,7 +550,6 @@ void guidance_v_guided_run(bool in_flight)
 
 bool guidance_v_set_guided_z(float z)
 {
-  printf("%d\n", guidance_v_mode);
   if (guidance_v_mode == GUIDANCE_V_MODE_GUIDED) {
     /* disable vertical velocity setpoints */
     guidance_v_guided_mode = GUIDANCE_V_GUIDED_MODE_ZHOLD;

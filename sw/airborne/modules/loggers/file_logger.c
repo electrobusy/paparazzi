@@ -111,6 +111,7 @@ static void file_logger_write_header(FILE *file) {
   fprintf(file, "T_nn,");
   fprintf(file, "p_nn,q_nn,r_nn,");
   fprintf(file, "T_pct,");
+  fprintf(file, "tol_x,tol_y,tol_z,");
   
   // > Lower level control - INDI controller: 
   fprintf(file, "INDI_p_dot_ref,INDI_q_dot_ref,INDI_r_dot_ref,"); // [ADD MORE VARIABLES LATER]
@@ -197,6 +198,7 @@ static void file_logger_write_row(FILE *file) {
   fprintf(file, "%f,%f,%f,", control_nn[1], control_nn[2], control_nn[3]);
   // -- Thrust percentage: 
   fprintf(file, "%f,", ctrl.thrust_pct);
+  fprintf(file, "%f,%f,%f,",tol_x,tol_y,tol_z);
 
   // > Lower level control - INDI controller: 
   fprintf(file, "%f,%f,%f,", indi.angular_accel_ref.p, indi.angular_accel_ref.q, indi.angular_accel_ref.r); // [ADD MORE VARIABLES LATER]

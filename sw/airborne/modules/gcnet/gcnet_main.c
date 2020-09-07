@@ -38,8 +38,15 @@
 #include "firmwares/rotorcraft/stabilization/stabilization_rate_indi.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
 
+#include "firmwares/rotorcraft/guidance/guidance_v.h"
+#include "firmwares/rotorcraft/guidance/guidance_h.h"
+
+#include "subsystems/navigation/waypoints.h"
+
 #include "autopilot.h"
 #include "subsystems/imu.h" // -- IMU
+
+#include "generated/flight_plan.h" // check this folder
 
 // standard libraries 
 #include <time.h>
@@ -76,14 +83,20 @@
 #endif
 
 #ifndef THRUST_I_GAIN
-#define THRUST_I_GAIN -0.1
+#define THRUST_I_GAIN -2
 #endif
 
 float thrust_p_gain = THRUST_P_GAIN;
 float thrust_d_gain = THRUST_D_GAIN;
 float thrust_i_gain = THRUST_I_GAIN;
 
-Butterworth2LowPass accel_ned_filt; 
+Butterworth2LowPass accel_ned_filt_x;
+Butterworth2LowPass accel_ned_filt_y;
+Butterworth2LowPass accel_ned_filt_z;
+
+struct FloatVect3 accel_ned_filt;
+struct FloatVect3 acc_body_filt;
+	struct FloatRMat R_NED_2_BODY;
 
 float thrust_effectiveness = 0.05f; // transfer function from G to thrust percentage
 float error_integrator = 0.f;
@@ -124,6 +137,7 @@ struct FloatVect2 delta_pos_NWU;
 struct FloatVect2 delta_pos_net; // position
 struct FloatVect2 vel_net; // velocity
 float psi_net;
+struct FloatEulers att_euler_net; // attitude
 
 // -- rotational matrices  
 struct FloatRMat R_OT_2_NED, R_NED_2_NWU;
@@ -137,17 +151,30 @@ struct FloatEulers att_euler_NED, att_euler_NWU;
 struct FloatQuat att_quat; 
 
 // desired position and yaw angle [-- MAKE SURE THAT THIS CAN BE SET FROM THE FLIGHT PLAN]
-float desired_X = 5;
-float desired_Y = 0; 
-float desired_Z = 1; 
-float desired_psi = 0;
+// --> vectors (later we will obtain the points from the flightplan -- still needs improvement)
+float desired_X_vec[4] = {0, 6, 7, 1};
+float desired_Y_vec[4] = {5, 6, 1, 0};
+float desired_Z_vec[4] = {1, 2, 1, 1};
+float desired_psi_vec[4] = {PI/2, 0, -PI/2, -170*PI/180};
+
+// --> integer to choose next point
+int idx_wp = 0;
+
+// --> current desired values
+float desired_X;
+float desired_Y; 
+float desired_Z; 
+float desired_psi;
 
 // control inputs (from RC or NN): 
 struct ctrl_struct ctrl;
 float thrust_pct_before;
 
 // define tolerances (later when you reach final position)
-float tol = 0.3;
+bool mask = true;
+float tol_x = 0.4;
+float tol_y = 0.4;
+float tol_z = 0.4;
 
 /* ----------- FUNTIONS ----------- */
 
@@ -204,7 +231,7 @@ static void send_gcnet_main(struct transport_tx *trans, struct link_device *dev)
 	rates->r = -rates->r;
 
 	float az_nn_model = (control_nn[0] + BEBOP_MASS*GRAVITY_ACC)/BEBOP_MASS;
-	float az_nn = ctrl.thrust_pct*1.35*GRAVITY_ACC;
+	float az_nn_drone = ctrl.thrust_pct*1.35*GRAVITY_ACC;
 	float az_imu = -ACCEL_FLOAT_OF_BFP(imu.accel.z);
 
 	pprz_msg_send_GCNET_MAIN(
@@ -214,7 +241,7 @@ static void send_gcnet_main(struct transport_tx *trans, struct link_device *dev)
 		&(att_euler_NWU_deg.phi), &(att_euler_NWU_deg.theta), &(att_euler_NWU_deg.psi), 
 		&(rates->p), &(rates->q), &(rates->r),
 		&(control_nn[1]), &(control_nn[2]), &(control_nn[3]),
-		&(az_nn_model), &(az_nn), &(az_imu),
+		&(az_nn_model), &(az_nn_drone), &(az_imu),
 		&(state.ned_origin_f.hmsl)); 
     // &autopilot.mode, &record);
 }
@@ -241,8 +268,16 @@ void gcnet_init(void)
 	{
 		float sample_time = 1.f / PERIODIC_FREQUENCY;
 		float tau = 1.f / (2.f * M_PI * NN_FILTER_CUTOFF);
-		init_butterworth_2_low_pass(&accel_ned_filt, tau, sample_time, 0.0);
+		init_butterworth_2_low_pass(&accel_ned_filt_x, tau, sample_time, 0.0);
+		init_butterworth_2_low_pass(&accel_ned_filt_y, tau, sample_time, 0.0);
+		init_butterworth_2_low_pass(&accel_ned_filt_z, tau, sample_time, 0.0);
 	}
+
+	// Initialize desired position and yaw angle: 
+	desired_X = 0; // desired_X_vec[0];
+	desired_Y = 0; // desired_Y_vec[0];
+	desired_Z = 1; // desired_Z_vec[0];
+	desired_psi = 0; // desired_psi_vec[0];
 }
 
 /*
@@ -297,17 +332,19 @@ void gcnet_control(UNUSED bool in_flight)
 	// Compute the value of psi_ref in the network's reference frame
 	psi_net = att_euler_NWU.psi - desired_psi;
 
-	att_euler_NWU.psi = psi_net;
+	att_euler_net.phi = att_euler_NWU.phi;
+	att_euler_net.theta = att_euler_NWU.theta;
+	att_euler_net.psi = psi_net;
 
 	// -- transform Euler to quaternions - function is already coded on "pprz_algebra_float.c" file
-	float_quat_of_eulers(&att_quat, &att_euler_NWU);
+	float_quat_of_eulers(&att_quat, &att_euler_net);
 
 	// -- assign states to the state vector that is fed to the network: 
-	state_nn[0] = delta_pos_NWU.x;
-	state_nn[1] = delta_pos_NWU.y; 
+	state_nn[0] = delta_pos_net.x;
+	state_nn[1] = delta_pos_net.y; 
 	state_nn[2] = pos_NWU.z - desired_Z;
-	state_nn[3] = vel_NWU.x;
-	state_nn[4] = vel_NWU.y;
+	state_nn[3] = vel_net.x;
+	state_nn[4] = vel_net.y;
 	state_nn[5] = vel_NWU.z; 
 	state_nn[6] = att_quat.qi;
 	state_nn[7] = att_quat.qx;
@@ -318,7 +355,25 @@ void gcnet_control(UNUSED bool in_flight)
 
 	// -- feed state to the network 
 	gettimeofday(&t0, 0);
-	nn_control(state_nn, control_nn);
+	// if(zero_end_net)
+	// {
+		nn_control(state_nn, control_nn);
+	// }
+	/* 
+	else
+	{
+		float state_norm[NUM_STATES];
+
+    // 1 - pre-processing input
+    preprocess_input(state_nn, state_norm, in_norm_mean, in_norm_std);
+
+    // 2 - neural network prediction
+    nn_predict(state_norm, control, weights_in, bias_in, weights_hid, bias_hid, weights_out, bias_out);
+    
+    // 3 - post-processing output
+    postprocess_output(control_nn, out_scale_min, out_scale_max, out_norm_mean, out_norm_std);
+	} */ 
+	
 	gettimeofday(&t1, 0);
 	nn_process_time = timedifference_msec(t0, t1); 	
 }
@@ -378,13 +433,45 @@ void gcnet_guidance(bool in_flight)
 
 		// -- send command
 		stabilization_cmd[COMMAND_THRUST] = thrust_int;  
+
 	}
+
+	printf("%f \t %f \t %f \t %f \t %f \n", fabs(state_nn[0]), fabs(state_nn[1]), fabs(state_nn[2]), att_euler_NWU.psi*PI/180, nn_process_time);
 	
-	// CHECK THIS ! -- if drone within the final region, then return True and switch to another controller
-	/* 
-	if ((fabs(state_nn[0]) < tol) && (fabs(state_nn[1]) < tol) && (fabs(state_nn[2]) < 0.1))
-		autopilot_static_set_mode(AP_MODE_HOVER_Z_HOLD);
-	*/
+	// if drone within the waypoint's neighbourhood:
+	if ((fabs(state_nn[0]) < tol_x) && (fabs(state_nn[1]) < tol_y) && (fabs(state_nn[2]) < tol_z))
+	{
+		/* 
+		// if last waypoint (considering that we have 4 waypoints) 
+		if(idx_wp == 3)
+		{  
+			idx_wp = 0;
+			*/
+		/*
+			if(mask) 
+			{
+				guidance_h_hover_enter();
+				// guidance_v_init(); -- the _v_z_enter() function already initializes with the required GUIDED mode
+				guidance_v_z_enter();
+				mask = false;
+				printf("Hover here now!\n");
+			}
+			// guidance_v_guided_mode = GUIDANCE_V_GUIDED_MODE_ZHOLD;
+			guidance_h_guided_run(in_flight);
+			guidance_v_guided_run(in_flight); */ 
+			printf("Hello Jelle, I am hovering badly with the net!\n");
+		} 
+		/* else // else change waypoint 
+		{
+			idx_wp = idx_wp + 1;
+
+			printf("Change Waypoint!\n");
+		}
+		desired_X = desired_X_vec[idx_wp];
+		desired_Y = desired_Y_vec[idx_wp]; 
+		desired_Z = desired_Z_vec[idx_wp]; 
+		desired_psi = desired_psi_vec[idx_wp]; 
+	}*/ 
 }
 
 /*
@@ -402,10 +489,22 @@ void acceleration_z_controller(float desired_az)
 	struct NedCoor_f *accel = stateGetAccelNed_f();
 	
 	// filter acceleration using a butterworth filter (because it is noisy): 
-	update_butterworth_2_low_pass(&accel_ned_filt, accel->z);
+	update_butterworth_2_low_pass(&accel_ned_filt_x, accel->x);
+	update_butterworth_2_low_pass(&accel_ned_filt_y, accel->y);
+	update_butterworth_2_low_pass(&accel_ned_filt_z, accel->z);
+
+	accel_ned_filt.x = accel_ned_filt_x.o[0];
+	accel_ned_filt.y = accel_ned_filt_y.o[0];
+	accel_ned_filt.z = accel_ned_filt_z.o[0] - GRAVITY_ACC;
+
+	float_rmat_of_eulers_321(&R_NED_2_BODY, &att_euler_NED);
+
+	float_rmat_vmult(&acc_body_filt, &R_NED_2_BODY, &accel_ned_filt);
+
+	float filtered_az = acc_body_filt.z;
 
 	// transform from NED to Body: 
-	float filtered_az = (accel_ned_filt.o[0] - GRAVITY_ACC)/cosf(stateGetNedToBodyEulers_f()->theta)/cosf(stateGetNedToBodyEulers_f()->phi);
+	// float filtered_az = (accel_ned_filt.o[0] - GRAVITY_ACC)/cosf(stateGetNedToBodyEulers_f()->theta)/cosf(stateGetNedToBodyEulers_f()->phi);
 
 	// get the acceleration error:
 	float error_az =  desired_az - filtered_az;
@@ -448,6 +547,7 @@ void guidance_h_module_init(void)
 
 	// initialize certain variables to execute the gcnet 
 	gcnet_init();
+	guidance_v_init();
 }
 
 // Enter in the guidance_h module
@@ -472,9 +572,13 @@ void guidance_h_module_run(bool in_flight)
   } 
   else 
 	{
-		/* use neural network to guide drone */
+		/*use neural network to guide drone */
 		gcnet_guidance(in_flight);
-		
+		/* 
+		printf("==============================================\n");		
+		printf("%f \t %f \t %f (wp_x,wp_y,wp_z) \n",); 		
+		printf("==============================================\n");		
+		*/ 
 	}
 }
 

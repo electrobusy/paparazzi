@@ -13,15 +13,19 @@
   <!-- waypoints -->
   <waypoints>
 
-    <waypoint lat="51.990631" lon="4.376796" name="HOME"/>
+    <waypoint lat="51.990631" lon="4.376796" name="HOME"/> 
 
     <!-- Waypoints for testing the gcnet -->
-    <waypoint name="Origin" x="0" y="0"/>
-    <waypoint name="WP1" x="-4" y="-4"/>
-    <waypoint name="WP2" x="-4" y="4"/>
-    <waypoint name="WP3" x="4" y="4"/>
-    <waypoint name="WP4" x="4" y="-4"/>
-    <waypoint name="desired" x="5" y="0"/>
+    <waypoint name="Origin" x="0" y="0" height="1."/>
+
+    <!-- One point to another -->
+    <waypoint name="desired" x="5" y="0" height="1."/>
+
+    <!-- For the waypoint tracking scenario -->
+    <waypoint name="WP1" x="-4" y="-4" height="1."/>
+    <waypoint name="WP2" x="-4" y="4" height="1."/>
+    <waypoint name="WP3" x="4" y="4" height="1."/>
+    <waypoint name="WP4" x="4" y="-4" height="1."/>
 
     <!-- Important for the exceptions -->
     <waypoint name="CLIMB" x="1.9" y="1.0"/>
@@ -59,6 +63,7 @@
     </sector>
   </sectors>
 
+  <!-- In case anything goes wrong, define exceptions, so then the drone can be recovered -->
   <exceptions>
     <!-- RC lost -->
     <!--exception cond="((radio_control.status == RC_REALLY_LOST) &&
@@ -151,6 +156,19 @@
     <block name="Landed">
       <call_once fun="NavKillThrottle()"/>
       <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
+    </block>
+    <!-- My own blocks -->
+    <block name="WP1_heading">
+      <call_once fun="nav_set_heading_deg(0)"/>
+    </block>
+    <block name="WP2_heading">
+      <call_once fun="nav_set_heading_deg(0)"/>
+    </block>  
+    <block name="WP3_heading">
+      <call_once fun="nav_set_heading_deg(0)"/>
+    </block>
+    <block name="WP4_heading">
+      <call_once fun="nav_set_heading_deg(0)"/>
     </block>
   </blocks>
 </flight_plan>

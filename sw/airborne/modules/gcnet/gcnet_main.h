@@ -46,7 +46,7 @@
 // -- functions for nn operations
 #include "modules/gcnet/nn_operations.h"
 // -- variables with nn parameters (weights, biases and other information about the nets)
-// #include "modules/gcnet/nn_parameters.h" // -- already in "nn_operations.h"
+// #include "modules/gcnet/nn_parameters_non_zero.h" // -- already in "nn_operations.h"
 
 // control inputs (from receiver and own commands): 
 struct ctrl_struct {
@@ -108,6 +108,11 @@ extern float desired_psi;
 // control inputs (from RC or NN): 
 extern struct ctrl_struct ctrl;
 extern float thrust_pct_before;
+
+// tolerances
+extern float tol_x;
+extern float tol_y;
+extern float tol_z;
 
 // define tolerances (later when you reach final position)
 // extern float tol;
