@@ -13,7 +13,6 @@
   <!-- waypoints -->
   <waypoints>
 
-<<<<<<< HEAD
     <waypoint lat="51.990631" lon="4.376796" name="HOME"/> 
 
     <!-- Waypoints for testing the gcnet -->
@@ -27,17 +26,6 @@
     <waypoint name="WP2" x="-4" y="4" height="1."/>
     <waypoint name="WP3" x="4" y="4" height="1."/>
     <waypoint name="WP4" x="4" y="-4" height="1."/>
-=======
-    <waypoint lat="51.990631" lon="4.376796" name="HOME"/>
-
-    <!-- Waypoints for testing the gcnet -->
-    <waypoint name="Origin" x="0" y="0"/>
-    <waypoint name="WP1" x="-4" y="-4"/>
-    <waypoint name="WP2" x="-4" y="4"/>
-    <waypoint name="WP3" x="4" y="4"/>
-    <waypoint name="WP4" x="4" y="-4"/>
-    <waypoint name="desired" x="5" y="0"/>
->>>>>>> 2d03568e4d8de7d8b185b37586ec3da1cf503560
 
     <!-- Important for the exceptions -->
     <waypoint name="CLIMB" x="1.9" y="1.0"/>
