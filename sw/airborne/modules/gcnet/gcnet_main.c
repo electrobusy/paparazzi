@@ -436,7 +436,7 @@ void gcnet_guidance(bool in_flight)
 
 	}
 
-	printf("%f \t %f \t %f \t %f \t %f \n", fabs(state_nn[0]), fabs(state_nn[1]), fabs(state_nn[2]), att_euler_NWU.psi*180/PI);
+	printf("%f \t %f \t %f \t %f \t %f (x,y,z,psi,nn_time) \n", fabs(state_nn[0]), fabs(state_nn[1]), fabs(state_nn[2]), att_euler_NWU.psi*180/PI), nn_process_time);
 	
 	// if drone within the waypoint's neighbourhood:
 	if ((fabs(state_nn[0]) < tol_x) && (fabs(state_nn[1]) < tol_y) && (fabs(state_nn[2]) < tol_z))
