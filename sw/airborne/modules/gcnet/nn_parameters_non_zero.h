@@ -7,7 +7,7 @@
 #define NUM_HIDDEN_LAYERS 2
 #define NUM_NODES 40
 
-extern const int num_nodes_vec[NUM_LAYERS];
+// extern const int num_nodes_vec[NUM_LAYERS];
 
 // NN network parameters -- define variables
 extern const float weights_in_nz[NUM_NODES][NUM_STATES];

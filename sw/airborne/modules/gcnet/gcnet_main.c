@@ -46,7 +46,9 @@
 #include "autopilot.h"
 #include "subsystems/imu.h" // -- IMU
 
-#include "generated/flight_plan.h" // check this folder
+#include "generated/flight_plan.h" // -- check this folder
+
+#include "modules/gcnet/nn_parameters_non_zero.h" // -- parameters for the non-zero end-velocity
 
 // standard libraries 
 #include <time.h>
@@ -152,8 +154,15 @@ struct FloatQuat att_quat;
 
 // desired position and yaw angle [-- MAKE SURE THAT THIS CAN BE SET FROM THE FLIGHT PLAN]
 // --> vectors (later we will obtain the points from the flightplan -- still needs improvement)
+/* 
 float desired_X_vec[4] = {-2.5, 2.1, 2.1, -2.5};
-float desired_Y_vec[4] = {2.7, 2.7, 2.3, -2.3};
+float desired_Y_vec[4] = {2.7, 2.7, -2.3, -2.3};
+float desired_Z_vec[4] = {1, 2, 1, 1};
+float desired_psi_vec[4] = {PI/2, 0, -PI/2, -170*PI/180};
+*/ 
+// -- simulation 
+float desired_X_vec[4] = {0, 6, 7, 1};
+float desired_Y_vec[4] = {5, 6, 1, 0};
 float desired_Z_vec[4] = {1, 2, 1, 1};
 float desired_psi_vec[4] = {PI/2, 0, -PI/2, -170*PI/180};
 
@@ -166,15 +175,18 @@ float desired_Y;
 float desired_Z; 
 float desired_psi;
 
+// Mask to activate zero-end network:
+bool zero_end_net = false;
+
 // control inputs (from RC or NN): 
 struct ctrl_struct ctrl;
 float thrust_pct_before;
 
 // define tolerances (later when you reach final position)
 bool mask = true;
-float tol_x = 0.5;
-float tol_y = 0.5;
-float tol_z = 0.5;
+float tol_x = 0.6;
+float tol_y = 0.4;
+float tol_z = 0.1;
 
 /* ----------- FUNTIONS ----------- */
 
@@ -274,10 +286,10 @@ void gcnet_init(void)
 	}
 
 	// Initialize desired position and yaw angle: 
-	desired_X = 0; // desired_X_vec[0];
-	desired_Y = 0; // desired_Y_vec[0];
-	desired_Z = 1; // desired_Z_vec[0];
-	desired_psi = 0; // desired_psi_vec[0];
+	desired_X = desired_X_vec[0];
+	desired_Y = desired_Y_vec[0];
+	desired_Z = desired_Z_vec[0];
+	desired_psi = desired_psi_vec[0];
 }
 
 /*
@@ -332,6 +344,17 @@ void gcnet_control(UNUSED bool in_flight)
 	// Compute the value of psi_ref in the network's reference frame
 	psi_net = att_euler_NWU.psi - desired_psi;
 
+	// psi in [-pi,pi]. If we surpass the boundaries, we have to sum or subtract 2*pi
+	if(psi_net < -PI)
+	{
+		psi_net = psi_net + 2*PI;
+	}
+	else if(psi_net > PI)
+	{
+		psi_net = psi_net - 2*PI;
+	}
+	
+	// -- attitude in Euler sent to the network
 	att_euler_net.phi = att_euler_NWU.phi;
 	att_euler_net.theta = att_euler_NWU.theta;
 	att_euler_net.psi = psi_net;
@@ -355,24 +378,24 @@ void gcnet_control(UNUSED bool in_flight)
 
 	// -- feed state to the network 
 	gettimeofday(&t0, 0);
-	// if(zero_end_net)
-	// {
+
+	if(zero_end_net) // zero end-velocity network
+	{
 		nn_control(state_nn, control_nn);
-	// }
-	/* 
-	else
+	} 
+	else // non-zero end-velocity network
 	{
 		float state_norm[NUM_STATES];
 
     // 1 - pre-processing input
-    preprocess_input(state_nn, state_norm, in_norm_mean, in_norm_std);
+    preprocess_input(state_nn, state_norm, in_norm_mean_nz, in_norm_std_nz);
 
     // 2 - neural network prediction
-    nn_predict(state_norm, control, weights_in, bias_in, weights_hid, bias_hid, weights_out, bias_out);
+    nn_predict(state_norm, control_nn, weights_in_nz, bias_in_nz, weights_hid_nz, bias_hid_nz, weights_out_nz, bias_out_nz);
     
     // 3 - post-processing output
-    postprocess_output(control_nn, out_scale_min, out_scale_max, out_norm_mean, out_norm_std);
-	} */ 
+    postprocess_output(control_nn, out_scale_min_nz, out_scale_max_nz, out_norm_mean_nz, out_norm_std_nz);
+	} 
 	
 	gettimeofday(&t1, 0);
 	nn_process_time = timedifference_msec(t0, t1); 	
@@ -436,7 +459,7 @@ void gcnet_guidance(bool in_flight)
 
 	}
 
-	printf("%f \t %f \t %f \t %f \t %f (x,y,z,psi,nn_time) \n", fabs(state_nn[0]), fabs(state_nn[1]), fabs(state_nn[2]), att_euler_NWU.psi*180/PI), nn_process_time);
+	printf("%f \t %f \t %f \t %f \t %f \t %d (x,y,z,psi,nn_time,idx_wp) \n", fabs(state_nn[0]), fabs(state_nn[1]), fabs(state_nn[2]), att_euler_NWU.psi*180/PI, nn_process_time, idx_wp);
 	
 	// if drone within the waypoint's neighbourhood:
 	if ((fabs(state_nn[0]) < tol_x) && (fabs(state_nn[1]) < tol_y) && (fabs(state_nn[2]) < tol_z))
@@ -444,6 +467,8 @@ void gcnet_guidance(bool in_flight)
 		// if last waypoint (considering that we have 4 waypoints) 
 		if(idx_wp == 3)
 		{  
+			// activate zero end-velocity network:
+			zero_end_net = true;
 			/* 
 			idx_wp = 0;
 
@@ -466,6 +491,7 @@ void gcnet_guidance(bool in_flight)
 
 			printf("Change Waypoint!\n");
 		}
+
 		desired_X = desired_X_vec[idx_wp];
 		desired_Y = desired_Y_vec[idx_wp]; 
 		desired_Z = desired_Z_vec[idx_wp]; 

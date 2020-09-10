@@ -1,18 +1,22 @@
 <!DOCTYPE airframe SYSTEM "../airframe.dtd">
 
-<airframe name="bebop2_gcnet_jelle">
+<airframe name="bebop_gcnet_jelle">
   <description>
-  Airframe file to fly a Bebop2 drone, for aggressive flight, 
+  Airframe file to fly a Bebop drone, for aggressive flight, 
     through waypoints using an optitrack system, such as the 
     Cyberzoo of TUDelft, using a gcnet -- from Jelle
   </description>
 
   <firmware name="rotorcraft">
+  
     <target name="ap" board="bebop"/>
 
+    <!-- Simulation -->
     <target name="nps" board="pc">
-      <module name="fdm" type="jsbsim"/>
-      <module name="udp"/>
+      <module name="stabilization" type="indi_simple"/> 
+      <module name="fdm" type="gazebo"/>
+      <!-- <module name="udp"/> --> 
+      <define name="FILE_LOGGER_PATH" value="/tmp/paparazzi"/>
     </target>
 
     <!--define name="USE_SONAR" value="FALSE"/>

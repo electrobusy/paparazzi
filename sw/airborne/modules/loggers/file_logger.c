@@ -73,6 +73,7 @@ static void file_logger_write_header(FILE *file) {
   
   fprintf(file, "time,");
   
+  /*
   // > Logs from body - In NED frame:
   fprintf(file, "pos_x_NED,pos_y_NED,pos_z_NED,");
   fprintf(file, "vel_x_NED,vel_y_NED,vel_z_NED,");
@@ -80,7 +81,8 @@ static void file_logger_write_header(FILE *file) {
   fprintf(file, "att_phi_NED,att_theta_NED,att_psi_NED,");
   fprintf(file, "att_qi_NED,att_qx_NED,att_qy_NED,att_qz_NED,");
   fprintf(file, "rate_p_NED,rate_q_NED,rate_r_NED,");
-  
+  */
+
   // > Neural Network file - Logs: [MY FILE]
   // -- post-processing time: 
   fprintf(file, "NN_pp_time,");
@@ -113,6 +115,7 @@ static void file_logger_write_header(FILE *file) {
   fprintf(file, "T_pct,");
   fprintf(file, "tol_x,tol_y,tol_z,");
   
+  /* 
   // > Lower level control - INDI controller: 
   fprintf(file, "INDI_p_dot_ref,INDI_q_dot_ref,INDI_r_dot_ref,"); // [ADD MORE VARIABLES LATER]
   
@@ -129,7 +132,7 @@ static void file_logger_write_header(FILE *file) {
   fprintf(file, "motor_cmd_pitch_1,motor_cmd_pitch_2,motor_cmd_pitch_3,motor_cmd_pitch_4,");
   // -- Motor Commands - Yaw:
   fprintf(file, "motor_cmd_yaw_1,motor_cmd_yaw_2,motor_cmd_yaw_3,motor_cmd_yaw_4,");
-  
+  */ 
   // > IMU accelerations: 
   fprintf(file, "IMU_ax,IMU_ay,IMU_az,");
   // [ADD MORE - IN THE END]
@@ -153,20 +156,23 @@ static void file_logger_write_row(FILE *file) {
   
   fprintf(file, "%f,", get_sys_time_float());
 
+  /* 
   // > Logs from body - In NED frame:
   struct NedCoor_f *pos = stateGetPositionNed_f(); 
   struct NedCoor_f *vel = stateGetSpeedNed_f(); 
   struct NedCoor_f *acc = stateGetAccelNed_f();
   struct FloatEulers *att = stateGetNedToBodyEulers_f();
   struct FloatQuat *att_q = stateGetNedToBodyQuat_f();
+  */
   struct FloatRates *rates = stateGetBodyRates_f();
-
+  /*
   fprintf(file, "%f,%f,%f,", pos->x, pos->y, pos->z);
   fprintf(file, "%f,%f,%f,", vel->x, vel->y, vel->z);
   fprintf(file, "%f,%f,%f,", acc->x, acc->y, acc->z);
   fprintf(file, "%f,%f,%f,", att->phi, att->theta, att->psi); 
   fprintf(file, "%f,%f,%f,%f,", att_q->qi, att_q->qx, att_q->qy, att_q->qz); 
   fprintf(file, "%f,%f,%f,", rates->p, rates->q, rates->r); 
+  */ 
 
   // > Neural Network file - Logs: [MY FILE]
   // -- post-processing time: 
@@ -198,11 +204,12 @@ static void file_logger_write_row(FILE *file) {
   fprintf(file, "%f,%f,%f,", control_nn[1], control_nn[2], control_nn[3]);
   // -- Thrust percentage: 
   fprintf(file, "%f,", ctrl.thrust_pct);
-  fprintf(file, "%f,%f,%f,",tol_x,tol_y,tol_z);
+  fprintf(file, "%f,%f,%f,",tol_x, tol_y, tol_z);
 
+  /*
   // > Lower level control - INDI controller: 
   fprintf(file, "%f,%f,%f,", indi.angular_accel_ref.p, indi.angular_accel_ref.q, indi.angular_accel_ref.r); // [ADD MORE VARIABLES LATER]
-  
+   
   // > Lower level controls - Rotors Mixing Module: 
   // -- Motor Mixing commands:
   fprintf(file, "%d,%d,%d,%d,", motor_mixing.commands[0], motor_mixing.commands[1], motor_mixing.commands[2], motor_mixing.commands[3]);
@@ -216,7 +223,7 @@ static void file_logger_write_row(FILE *file) {
   fprintf(file, "%d,%d,%d,%d,", motor_commands.pitch[0], motor_commands.pitch[1], motor_commands.pitch[2], motor_commands.pitch[3]);
   // -- Motor Commands - Yaw:
   fprintf(file, "%d,%d,%d,%d,", motor_commands.yaw[0], motor_commands.yaw[1], motor_commands.yaw[2], motor_commands.yaw[3]);
-  
+  */ 
   // > IMU accelerations: 
   fprintf(file, "%f,%f,%f,", ACCEL_FLOAT_OF_BFP(imu.accel.x), ACCEL_FLOAT_OF_BFP(imu.accel.y), ACCEL_FLOAT_OF_BFP(imu.accel.z));
   

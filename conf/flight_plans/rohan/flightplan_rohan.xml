@@ -157,7 +157,7 @@
       <call_once fun="NavKillThrottle()"/>
       <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
     </block>
-    <!-- My own blocks -->
+    <!-- My own blocks [NOT USED] 
     <block name="WP1_heading">
       <call_once fun="nav_set_heading_deg(0)"/>
     </block>
@@ -170,5 +170,6 @@
     <block name="WP4_heading">
       <call_once fun="nav_set_heading_deg(0)"/>
     </block>
+    -->
   </blocks>
 </flight_plan>
