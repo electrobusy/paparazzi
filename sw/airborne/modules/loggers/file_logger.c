@@ -287,6 +287,12 @@ void file_logger_start(void)
 void file_logger_stop(void)
 {
   if (file_logger != NULL) {
+    /*
+    fprintf(file_logger, "Happy happy\n");
+    sleep(1);
+    */
+    fflush(file_logger);
+    sleep(1);
     fclose(file_logger);
     file_logger = NULL;
   }

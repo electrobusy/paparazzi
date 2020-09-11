@@ -154,20 +154,22 @@ struct FloatQuat att_quat;
 
 // desired position and yaw angle [-- MAKE SURE THAT THIS CAN BE SET FROM THE FLIGHT PLAN]
 // --> vectors (later we will obtain the points from the flightplan -- still needs improvement)
-/* 
+
 float desired_X_vec[4] = {-2.5, 2.1, 2.1, -2.5};
-float desired_Y_vec[4] = {2.7, 2.7, -2.3, -2.3};
+float desired_Y_vec[4] = {2.7, 2.7, -1.8, -2.3};
 float desired_Z_vec[4] = {1, 2, 1, 1};
 float desired_psi_vec[4] = {PI/2, 0, -PI/2, -170*PI/180};
-*/ 
+
+/*
 // -- simulation 
 float desired_X_vec[4] = {0, 6, 7, 1};
 float desired_Y_vec[4] = {5, 6, 1, 0};
 float desired_Z_vec[4] = {1, 2, 1, 1};
-float desired_psi_vec[4] = {PI/2, 0, -PI/2, -170*PI/180};
+float desired_psi_vec[4] = {PI/2, 0, -PI/2, -178*PI/180};
+*/
 
 // --> integer to choose next point
-int idx_wp = 0;
+int idx_wp;
 
 // --> current desired values
 float desired_X;
@@ -176,7 +178,7 @@ float desired_Z;
 float desired_psi;
 
 // Mask to activate zero-end network:
-bool zero_end_net = false;
+bool zero_end_net = true;
 
 // control inputs (from RC or NN): 
 struct ctrl_struct ctrl;
@@ -184,9 +186,9 @@ float thrust_pct_before;
 
 // define tolerances (later when you reach final position)
 bool mask = true;
-float tol_x = 0.6;
-float tol_y = 0.4;
-float tol_z = 0.1;
+float tol_x = 0.3;
+float tol_y = 0.3;
+float tol_z = 0.5;
 
 /* ----------- FUNTIONS ----------- */
 
@@ -285,11 +287,14 @@ void gcnet_init(void)
 		init_butterworth_2_low_pass(&accel_ned_filt_z, tau, sample_time, 0.0);
 	}
 
+	// idx_wp initialization:
+	idx_wp = 0;
+
 	// Initialize desired position and yaw angle: 
-	desired_X = desired_X_vec[0];
-	desired_Y = desired_Y_vec[0];
-	desired_Z = desired_Z_vec[0];
-	desired_psi = desired_psi_vec[0];
+	desired_X = 2.5; // desired_X_vec[0];
+	desired_Y = 2.3; // desired_Y_vec[0];
+	desired_Z = 1; // desired_Z_vec[0];
+	desired_psi = 0; // desired_psi_vec[0];
 }
 
 /*
@@ -464,6 +469,7 @@ void gcnet_guidance(bool in_flight)
 	// if drone within the waypoint's neighbourhood:
 	if ((fabs(state_nn[0]) < tol_x) && (fabs(state_nn[1]) < tol_y) && (fabs(state_nn[2]) < tol_z))
 	{
+		/* [UNCOMMENT HERE]
 		// if last waypoint (considering that we have 4 waypoints) 
 		if(idx_wp == 3)
 		{  
@@ -484,7 +490,8 @@ void gcnet_guidance(bool in_flight)
 			guidance_h_guided_run(in_flight);
 			guidance_v_guided_run(in_flight); */ 
 			printf("Hello Jelle, I am hovering badly with the net!\n"); 
-		} 
+		// }
+		/* [UNCOMMENT HERE]
 		else // else change waypoint 
 		{
 			idx_wp = idx_wp + 1;
@@ -496,6 +503,7 @@ void gcnet_guidance(bool in_flight)
 		desired_Y = desired_Y_vec[idx_wp]; 
 		desired_Z = desired_Z_vec[idx_wp]; 
 		desired_psi = desired_psi_vec[idx_wp]; 
+		*/
 	}
 }
 
@@ -569,16 +577,16 @@ void acceleration_z_controller(float desired_az)
 void guidance_h_module_init(void)
 { 
 	register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_GCNET_MAIN, send_gcnet_main);
-
-	// initialize certain variables to execute the gcnet 
-	gcnet_init();
-	guidance_v_init();
 }
 
 // Enter in the guidance_h module
 void guidance_h_module_enter(void)
 {
-	autopilot_set_motors_on(true);
+	// autopilot_set_motors_on(true);
+
+	// initialize certain variables to execute the gcnet 
+	gcnet_init();
+	guidance_v_init();
 }
 
 // Read the RC values 

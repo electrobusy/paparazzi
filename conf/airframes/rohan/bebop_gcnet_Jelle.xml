@@ -8,15 +8,11 @@
   </description>
 
   <firmware name="rotorcraft">
-  
     <target name="ap" board="bebop"/>
 
-    <!-- Simulation -->
     <target name="nps" board="pc">
-      <module name="stabilization" type="indi_simple"/> 
-      <module name="fdm" type="gazebo"/>
-      <!-- <module name="udp"/> --> 
-      <define name="FILE_LOGGER_PATH" value="/tmp/paparazzi"/>
+      <module name="fdm" type="jsbsim"/>
+      <module name="udp"/>
     </target>
 
     <!--define name="USE_SONAR" value="FALSE"/>
