@@ -174,8 +174,8 @@ struct FloatQuat att_quat;
 // desired position and yaw angle [-- MAKE SURE THAT THIS CAN BE SET FROM THE FLIGHT PLAN]
 // --> vectors (later we will obtain the points from the flightplan -- still needs improvement)
 
-float desired_X_vec[4] = {-2.5, 2.0, 2.0, -2.5};
-float desired_Y_vec[4] = {2.7, 2.7, -1.8, -2.3};
+float desired_X_vec[4] = {-2.5, 1.4, 1.4, -2.5};
+float desired_Y_vec[4] = {2.7, 2.7, -1.8, -1.8};
 float desired_Z_vec[4] = {1, 2, 1, 1};
 float desired_psi_vec[4] = {PI/2, 0, -PI/2, -170*PI/180};
 
@@ -200,7 +200,7 @@ float desired_Z;
 float desired_psi;
 
 // Mask to activate zero-end network:
-bool zero_end_net = true;
+bool zero_end_net = false;
 
 // control inputs (from RC or NN): 
 struct ctrl_struct ctrl;
@@ -212,9 +212,9 @@ struct debug_PID debug_az_PID;
 // define tolerances (later when you reach final position)
 bool mask = true;
 bool mask_last_waypoint = false;
-float tol_x = 0.2;
-float tol_y = 0.2;
-float tol_z = 0.2;
+float tol_x = 0.5;
+float tol_y = 0.5;
+float tol_z = 0.3;
 
 /* ----------- FUNTIONS ----------- */
 
@@ -370,10 +370,10 @@ void gcnet_init(void)
 	idx_wp = 0;
 
 	// Initialize desired position and yaw angle: 
-	desired_X = desired_X_vec[0];
-	desired_Y = desired_Y_vec[0];
-	desired_Z = desired_Z_vec[0];
-	desired_psi = desired_psi_vec[0];
+	desired_X = -2.5; // desired_X_vec[0];
+	desired_Y = 2.5; // desired_Y_vec[0];
+	desired_Z = 1; // desired_Z_vec[0];
+	desired_psi = PI/2; // desired_psi_vec[0];
 }	
 
 /*
@@ -548,21 +548,20 @@ void gcnet_guidance(bool in_flight)
 	// if drone within the waypoint's neighbourhood:
 	if ((fabs(state_nn[0]) < tol_x) && (fabs(state_nn[1]) < tol_y) && (fabs(state_nn[2]) < tol_z))
 	{
-
-		if((mask_last_waypoint) && (first_time_lastwaypoint))
+		/*
+		if(mask_last_waypoint)
 		{
 			t_wp_entry[idx_wp] = get_sys_time_float();
 			mask_last_waypoint = false;
+			idx_wp = 4;
 		}
-
+		
 		// if last waypoint is activated (considering that we have 4 waypoints) 
 		if(idx_wp == 3)
 		{  
-			// activate zero end-velocity network:
 			zero_end_net = true; 
 			mask_last_waypoint = true;
-			first_time_lastwaypoint = true;
-			// idx_wp = 0;
+			// idx_wp = 0; */
 		/*
 		if(mask) 
 			{
@@ -576,19 +575,24 @@ void gcnet_guidance(bool in_flight)
 			guidance_h_guided_run(in_flight);
 			guidance_v_guided_run(in_flight); */
 			printf("Hello Jelle, I am hovering badly with the net!\n"); 
-		}
+		/*}
 		else // else change waypoint 
 		{
-			t_wp_entry[idx_wp] = get_sys_time_float();
-			idx_wp = idx_wp + 1;
+			// this is because of the last waypoint (so we can log the time)
+			if (idx_wp < 4)
+			{
+				t_wp_entry[idx_wp] = get_sys_time_float();
+				idx_wp = idx_wp + 1;
 
-			printf("Change Waypoint!\n");
+				printf("Change Waypoint!\n");
 
-			desired_X = desired_X_vec[idx_wp];
-			desired_Y = desired_Y_vec[idx_wp]; 
-			desired_Z = desired_Z_vec[idx_wp]; 
-			desired_psi = desired_psi_vec[idx_wp]; 
+				desired_X = desired_X_vec[idx_wp];
+				desired_Y = desired_Y_vec[idx_wp]; 
+				desired_Z = desired_Z_vec[idx_wp]; 
+				desired_psi = desired_psi_vec[idx_wp]; 
+			}
 		}
+		*/
 	}
 }
 

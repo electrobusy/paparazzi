@@ -115,6 +115,7 @@ static void file_logger_write_header(FILE *file) {
   fprintf(file, "p_nn,q_nn,r_nn,");
   fprintf(file, "T_pct,");
   fprintf(file, "tol_x,tol_y,tol_z,");
+  fprintf(file, "t_1,t_2,t_3,t_4,"); 
   
   // Lower level control - PID controller: 
   fprintf(file, "acc_ned_z,acc_ned_filt_x,acc_ned_filt_y,acc_ned_filt_z,desired_az,filtered_az,error_az,integrator_error,derivative_error,");
@@ -211,7 +212,9 @@ static void file_logger_write_row(FILE *file) {
   fprintf(file, "%f,%f,%f,", control_nn[1], control_nn[2], control_nn[3]);
   // -- Thrust percentage: 
   fprintf(file, "%f,", ctrl.thrust_pct);
-  fprintf(file, "%f,%f,%f,",tol_x, tol_y, tol_z);
+  fprintf(file, "%f,%f,%f,", tol_x, tol_y, tol_z);
+  // -- Time when reaches the waypoint (within the tolerances):
+  fprintf(file, "%f,%f,%f,%f,", t_wp_entry[0], t_wp_entry[1], t_wp_entry[2], t_wp_entry[3]); 
 
   // Lower level control - PID controller: 
   fprintf(file, "%f,%f,%f,%f,%f,%f,%f,%f,%f,", debug_az_PID.acc_ned_z, debug_az_PID.acc_ned_filt_x, debug_az_PID.acc_ned_filt_y, debug_az_PID.acc_ned_filt_z, debug_az_PID.desired_az, debug_az_PID.filtered_az, debug_az_PID.error_az, debug_az_PID.integrator_error, debug_az_PID.derivative_error);

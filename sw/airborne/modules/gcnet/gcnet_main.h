@@ -105,6 +105,9 @@ extern float desired_Y;
 extern float desired_Z; 
 extern float desired_psi;
 
+// times at which the drone enters in the waypoints
+extern float t_wp_entry[4];
+
 // control inputs (from RC or NN): 
 extern struct ctrl_struct ctrl;
 extern float thrust_pct_before;

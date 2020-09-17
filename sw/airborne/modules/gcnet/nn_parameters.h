@@ -7,6 +7,10 @@
 #define NUM_HIDDEN_LAYERS 2
 #define NUM_NODES 40
 
+// network dataset information: 
+// quadrotor3d_RW_Traj_20000_Nodes_80_alpha_0_8_PC3
+// 2500
+
 extern const int num_nodes_vec[NUM_LAYERS];
 
 // NN network parameters -- define variables
