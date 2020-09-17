@@ -114,6 +114,22 @@ extern float tol_x;
 extern float tol_y;
 extern float tol_z;
 
+// Variable used to debug PID thrust control: 
+struct debug_PID
+{
+	float acc_ned_z;
+	float acc_ned_filt_x;
+	float acc_ned_filt_y;
+	float acc_ned_filt_z;
+	float desired_az;
+	float filtered_az;
+	float error_az;
+	float integrator_error;
+	float derivative_error;
+};
+
+extern struct debug_PID debug_az_PID;
+
 // define tolerances (later when you reach final position)
 // extern float tol;
 

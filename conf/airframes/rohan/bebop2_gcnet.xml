@@ -58,7 +58,7 @@
     <axis name="YAW" failsafe_value="0"/>
     <!-- Thrust value in case OptiTrack is lost -->
     <!-- 0.5 * PPRZ MAX (or whatever it's called); nominal is 0.56 -->
-    <axis name="THRUST" failsafe_value="4600"/>
+    <axis name="THRUST" failsafe_value="6000"/>
   </commands>
 
   <servos driver="Default">
@@ -94,6 +94,7 @@
     <define name="MAG_Y_SENS" value="9.71913902739" integer="16"/>
     <define name="MAG_Z_SENS" value="6.88648156696" integer="16"/>
 
+  <!--
     <define name="ACCEL_X_NEUTRAL" value="24"/>
     <define name="ACCEL_Y_NEUTRAL" value="-57"/>
     <define name="ACCEL_Z_NEUTRAL" value="-401"/>
@@ -103,7 +104,7 @@
 
     <define name="BODY_TO_IMU_PHI" value="-0.79" unit="deg"/>
     <define name="BODY_TO_IMU_THETA" value="0.105" unit="deg"/>
-    <define name="BODY_TO_IMU_PSI" value="0." unit="deg"/>
+    <define name="BODY_TO_IMU_PSI" value="0." unit="deg"/> -->
   </section>
 
   <!-- local magnetic field -->

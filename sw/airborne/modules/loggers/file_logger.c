@@ -90,6 +90,7 @@ static void file_logger_write_header(FILE *file) {
   // -- body state variables - OT:
   fprintf(file, "pos_x_OT,pos_y_OT,pos_z_OT,");
   fprintf(file, "vel_x_OT,vel_y_OT,vel_z_OT,");
+  fprintf(file, "acc_x_NED,acc_y_NED,acc_z_NED,");
   // -- body state variables - NED:
   fprintf(file, "pos_x_NED_v2,pos_y_NED_v2,pos_z_NED_v2,");
   fprintf(file, "vel_x_NED_v2,vel_y_NED_v2,vel_z_NED_v2,");
@@ -115,6 +116,8 @@ static void file_logger_write_header(FILE *file) {
   fprintf(file, "T_pct,");
   fprintf(file, "tol_x,tol_y,tol_z,");
   
+  // Lower level control - PID controller: 
+  fprintf(file, "acc_ned_z,acc_ned_filt_x,acc_ned_filt_y,acc_ned_filt_z,desired_az,filtered_az,error_az,integrator_error,derivative_error,");
   /* 
   // > Lower level control - INDI controller: 
   fprintf(file, "INDI_p_dot_ref,INDI_q_dot_ref,INDI_r_dot_ref,"); // [ADD MORE VARIABLES LATER]
@@ -174,12 +177,16 @@ static void file_logger_write_row(FILE *file) {
   fprintf(file, "%f,%f,%f,", rates->p, rates->q, rates->r); 
   */ 
 
+
+  struct NedCoor_f *acc = stateGetAccelNed_f();
+
   // > Neural Network file - Logs: [MY FILE]
   // -- post-processing time: 
   fprintf(file, "%f,", nn_process_time);
   // -- body state variables - OT:
   fprintf(file, "%f,%f,%f,", pos_OT.x, pos_OT.y, pos_OT.z);
   fprintf(file, "%f,%f,%f,", vel_OT.x, vel_OT.y, vel_OT.z); 
+  fprintf(file, "%f,%f,%f,", acc->x, acc->y, acc->z);
   // -- body state variables - NED:
   fprintf(file, "%f,%f,%f,", pos_NED.x, pos_NED.y, pos_NED.z);
   fprintf(file, "%f,%f,%f,", vel_NED.x, vel_NED.y, vel_NED.z);
@@ -206,6 +213,8 @@ static void file_logger_write_row(FILE *file) {
   fprintf(file, "%f,", ctrl.thrust_pct);
   fprintf(file, "%f,%f,%f,",tol_x, tol_y, tol_z);
 
+  // Lower level control - PID controller: 
+  fprintf(file, "%f,%f,%f,%f,%f,%f,%f,%f,%f,", debug_az_PID.acc_ned_z, debug_az_PID.acc_ned_filt_x, debug_az_PID.acc_ned_filt_y, debug_az_PID.acc_ned_filt_z, debug_az_PID.desired_az, debug_az_PID.filtered_az, debug_az_PID.error_az, debug_az_PID.integrator_error, debug_az_PID.derivative_error);
   /*
   // > Lower level control - INDI controller: 
   fprintf(file, "%f,%f,%f,", indi.angular_accel_ref.p, indi.angular_accel_ref.q, indi.angular_accel_ref.r); // [ADD MORE VARIABLES LATER]
@@ -223,9 +232,10 @@ static void file_logger_write_row(FILE *file) {
   fprintf(file, "%d,%d,%d,%d,", motor_commands.pitch[0], motor_commands.pitch[1], motor_commands.pitch[2], motor_commands.pitch[3]);
   // -- Motor Commands - Yaw:
   fprintf(file, "%d,%d,%d,%d,", motor_commands.yaw[0], motor_commands.yaw[1], motor_commands.yaw[2], motor_commands.yaw[3]);
-  */ 
+  */
   // > IMU accelerations: 
   fprintf(file, "%f,%f,%f,", ACCEL_FLOAT_OF_BFP(imu.accel.x), ACCEL_FLOAT_OF_BFP(imu.accel.y), ACCEL_FLOAT_OF_BFP(imu.accel.z));
+  // fprintf(file, "%d,%d,%d,", imu.accel.x, imu.accel.y, imu.accel.z);
   
   // > Auto-pilot mode: 
   fprintf(file, "%d,", autopilot.mode);
