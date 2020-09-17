@@ -200,7 +200,7 @@ float desired_Z;
 float desired_psi;
 
 // Mask to activate zero-end network:
-bool zero_end_net = false;
+bool zero_end_net = true;
 
 // control inputs (from RC or NN): 
 struct ctrl_struct ctrl;
