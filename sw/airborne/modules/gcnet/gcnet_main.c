@@ -212,9 +212,9 @@ struct debug_PID debug_az_PID;
 // define tolerances (later when you reach final position)
 bool mask = true;
 bool mask_last_waypoint = false;
-float tol_x = 0.5;
-float tol_y = 0.5;
-float tol_z = 0.3;
+float tol_x = 0.2;
+float tol_y = 0.2;
+float tol_z = 0.2;
 
 /* ----------- FUNTIONS ----------- */
 
@@ -370,10 +370,10 @@ void gcnet_init(void)
 	idx_wp = 0;
 
 	// Initialize desired position and yaw angle: 
-	desired_X = -2.5; // desired_X_vec[0];
-	desired_Y = 2.5; // desired_Y_vec[0];
+	desired_X = 2.5; // desired_X_vec[0];
+	desired_Y = -2; // desired_Y_vec[0];
 	desired_Z = 1; // desired_Z_vec[0];
-	desired_psi = PI/2; // desired_psi_vec[0];
+	desired_psi = 0; // desired_psi_vec[0];
 }	
 
 /*
