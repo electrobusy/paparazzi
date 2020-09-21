@@ -69,6 +69,7 @@
 #define BEBOP_MASS 0.38905 
 #endif
 
+/* 
 // For hover controller:
 #define KP_ALT 2
 #define KD_ALT 0.3
@@ -79,6 +80,7 @@
 #define KP_VZDOT 0.1
 
 #define HOVERTHRUST 0.56
+*/ 
 
 // Other default values
 // Closed-loop thrust control, else linear transform
@@ -114,7 +116,7 @@ struct FloatRMat R_NED_2_BODY;
 
 float thrust_effectiveness = 0.05f; // transfer function from G to thrust percentage
 float error_integrator = 0.f;
-float nominal_throttle = 0.52; //GUIDANCE_V_NOMINAL_HOVER_THROTTLE;
+float nominal_throttle = GUIDANCE_V_NOMINAL_HOVER_THROTTLE; // 0.52
 
 /* ---
 For hover controller:
@@ -214,7 +216,7 @@ bool mask = true;
 bool mask_last_waypoint = false;
 float tol_x = 0.2;
 float tol_y = 0.2;
-float tol_z = 0.2;
+float tol_z = 0.1;
 
 /* ----------- FUNTIONS ----------- */
 
@@ -298,6 +300,7 @@ float timedifference_msec(struct timeval t_t0, struct timeval t_t1)
 Function: Hovering controller (altitude controller)
 NOTE: Commanded position must be negative! 
 */
+/* 
 void hovering_ctrl(float z_cmd)
 {
 	// get current height (in NED)
@@ -346,6 +349,7 @@ void hovering_ctrl(float z_cmd)
 
 	stabilization_indi_attitude_run(cmd_quat_int, true);
 }
+*/ 
 
 /*
 Function: Guidance and Control Network Init Function
@@ -370,10 +374,10 @@ void gcnet_init(void)
 	idx_wp = 0;
 
 	// Initialize desired position and yaw angle: 
-	desired_X = 2.5; // desired_X_vec[0];
-	desired_Y = -2; // desired_Y_vec[0];
-	desired_Z = 1; // desired_Z_vec[0];
-	desired_psi = 0; // desired_psi_vec[0];
+	desired_X = 5; // desired_X_vec[0]; // 2.5
+	desired_Y = 0; // desired_Y_vec[0]; // -2
+	desired_Z = 0; // desired_Z_vec[0]; // 1
+	desired_psi = 0; // desired_psi_vec[0]; // 0
 }	
 
 /*
@@ -543,12 +547,12 @@ void gcnet_guidance(bool in_flight)
 
 	}
 
-	printf("%f \t %f \t %f \t %f \t %f \t %d \t %d \t %d \t %d (x,y,z,psi,nn_time,idx_wp, imu_x, imu_y, imu_z) \n", fabs(state_nn[0]), fabs(state_nn[1]), fabs(state_nn[2]), att_euler_NWU.psi*180/PI, nn_process_time, idx_wp, imu.accel.x, imu.accel.y, imu.accel.z);
+	printf("%f \t %f \t %f \t %f \t %f \t %d \t %f \t %f \t %f \t %f \t %f (x,y,z,psi,nn_time,idx_wp, imu_x, imu_y, imu_z, nominal_throttle, nominal throttle - pprz) \n", fabs(state_nn[0]), fabs(state_nn[1]), fabs(state_nn[2]), att_euler_NWU.psi*180/PI, nn_process_time, idx_wp, ACCEL_FLOAT_OF_BFP(imu.accel.x), ACCEL_FLOAT_OF_BFP(imu.accel.y), ACCEL_FLOAT_OF_BFP(imu.accel.z), nominal_throttle, GUIDANCE_V_NOMINAL_HOVER_THROTTLE);
 	
 	// if drone within the waypoint's neighbourhood:
 	if ((fabs(state_nn[0]) < tol_x) && (fabs(state_nn[1]) < tol_y) && (fabs(state_nn[2]) < tol_z))
 	{
-		/*
+		/* 
 		if(mask_last_waypoint)
 		{
 			t_wp_entry[idx_wp] = get_sys_time_float();
@@ -561,9 +565,10 @@ void gcnet_guidance(bool in_flight)
 		{  
 			zero_end_net = true; 
 			mask_last_waypoint = true;
-			// idx_wp = 0; */
-		/*
-		if(mask) 
+			// idx_wp = 0; 
+
+			
+			if(mask) 
 			{
 				guidance_h_hover_enter();
 				// guidance_v_init(); -- the _v_z_enter() function already initializes with the required GUIDED mode
@@ -575,7 +580,8 @@ void gcnet_guidance(bool in_flight)
 			guidance_h_guided_run(in_flight);
 			guidance_v_guided_run(in_flight); */
 			printf("Hello Jelle, I am hovering badly with the net!\n"); 
-		/*}
+		/*	
+		}
 		else // else change waypoint 
 		{
 			// this is because of the last waypoint (so we can log the time)
@@ -591,8 +597,7 @@ void gcnet_guidance(bool in_flight)
 				desired_Z = desired_Z_vec[idx_wp]; 
 				desired_psi = desired_psi_vec[idx_wp]; 
 			}
-		}
-		*/
+		} */
 	}
 }
 
