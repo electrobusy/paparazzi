@@ -133,6 +133,28 @@ struct debug_PID
 
 extern struct debug_PID debug_az_PID;
 
+// Variable used to debug PID altitude and horizontal control: 
+struct debug_PID_xyz
+{
+	float z_cmd;
+	float z_error_int;
+	float z_error;
+	float thrust_cmd;
+	float x_cmd;
+	float y_cmd;
+	float error_x;
+	float error_y;
+	float error_x_vel_frame;
+	float error_y_vel_frame;
+	float vx_curr_vel_frame;
+	float vy_curr_vel_frame;
+	float phi_cmd;
+	float theta_cmd;
+	float psi_cmd;
+};
+
+extern struct debug_PID_xyz debug_PID_hv;
+
 // define tolerances (later when you reach final position)
 // extern float tol;
 

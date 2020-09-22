@@ -35,6 +35,7 @@
 #include "filters/low_pass_filter.h" // filters
 
 #include "firmwares/rotorcraft/stabilization.h"
+#include "firmwares/rotorcraft/stabilization/stabilization_attitude.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_indi_simple.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_rate_indi.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
@@ -69,18 +70,23 @@
 #define BEBOP_MASS 0.38905 
 #endif
 
-/* 
-// For hover controller:
-#define KP_ALT 2
-#define KD_ALT 0.3
-#define KI_ALT 0.1
+// For the vertical (z) PI controller:
+#define KP_ALT 3 // 0.12
+#define KD_ALT 2 // 0.08
+#define KI_ALT 2 // 0.04
 
-#define KP_Z 3.0
-#define KP_VZ 3.0
-#define KP_VZDOT 0.1
+#define HOVERTHRUST GUIDANCE_V_NOMINAL_HOVER_THROTTLE // 0.56
 
-#define HOVERTHRUST 0.56
-*/ 
+// For the horizontal (x-y) P controller:
+#define KP_POS_X 1
+#define KP_POS_Y 1
+
+#define KP_VEL_X 0.8 // 0.2
+#define KP_VEL_Y 0.8 // 0.2
+
+#define CTRL_MAX_SPEED 10.0 // [m/s]
+#define CTRL_MAX_ROLL 50.0*PI/180.0 // [rad]
+#define CTRL_MAX_PITCH 50.0*PI/180.0 // [rad]
 
 // Other default values
 // Closed-loop thrust control, else linear transform
@@ -95,11 +101,11 @@
 #endif
 
 #ifndef THRUST_D_GAIN
-#define THRUST_D_GAIN -1
+#define THRUST_D_GAIN -1.0
 #endif
 
 #ifndef THRUST_I_GAIN
-#define THRUST_I_GAIN -1
+#define THRUST_I_GAIN -1.0
 #endif
 
 float thrust_p_gain = THRUST_P_GAIN;
@@ -121,14 +127,14 @@ float nominal_throttle = GUIDANCE_V_NOMINAL_HOVER_THROTTLE; // 0.52
 /* ---
 For hover controller:
 --- */ 
-float z_i = 0;
 float start_time;
 
 /* ---
 Declare functions from this file
 --- */
 float timedifference_msec(struct timeval t_t0, struct timeval t_t1); 
-void hovering_ctrl(float z_cmd);
+void z_PID_ctrl(float z_cmd);
+void xy_PID_ctrl(float x_cmd, float y_cmd);
 void gcnet_init(void);
 void gcnet_control(bool in_flight);	
 void gcnet_guidance(bool in_flight);
@@ -176,18 +182,18 @@ struct FloatQuat att_quat;
 // desired position and yaw angle [-- MAKE SURE THAT THIS CAN BE SET FROM THE FLIGHT PLAN]
 // --> vectors (later we will obtain the points from the flightplan -- still needs improvement)
 
+/* 
 float desired_X_vec[4] = {-2.5, 1.4, 1.4, -2.5};
 float desired_Y_vec[4] = {2.7, 2.7, -1.8, -1.8};
 float desired_Z_vec[4] = {1, 2, 1, 1};
 float desired_psi_vec[4] = {PI/2, 0, -PI/2, -170*PI/180};
+*/ 
 
-/*
 // -- simulation 
 float desired_X_vec[4] = {0, 6, 7, 1};
 float desired_Y_vec[4] = {5, 6, 1, 0};
 float desired_Z_vec[4] = {1, 2, 1, 1};
 float desired_psi_vec[4] = {PI/2, 0, -PI/2, -178*PI/180};
-*/
 
 // times at which the drone enters in the waypoints
 float t_wp_entry[4] = {0, 0, 0, 0};
@@ -211,12 +217,17 @@ float thrust_pct_before;
 // variable for PID thrust control debugging: 
 struct debug_PID debug_az_PID;
 
+// variable for PID horizontal and vertical control:
+struct debug_PID_xyz debug_PID_hv;
+
 // define tolerances (later when you reach final position)
 bool mask = true;
 bool mask_last_waypoint = false;
 float tol_x = 0.2;
 float tol_y = 0.2;
 float tol_z = 0.1;
+
+bool first_run = true;
 
 /* ----------- FUNTIONS ----------- */
 
@@ -237,7 +248,7 @@ static void send_gcnet_main(struct transport_tx *trans, struct link_device *dev)
 {
 	// Initialize transformation matrices (which are fixed):
 	float_rmat_of_eulers_321(&R_OT_2_NED,&eulers_OT_2_NED);
-  float_rmat_of_eulers_321(&R_NED_2_NWU,&eulers_NED_2_NWU);
+	float_rmat_of_eulers_321(&R_NED_2_NWU,&eulers_NED_2_NWU);
 
 	pos_OT_v2.x = stateGetPositionNed_f()->x;
 	pos_OT_v2.y = stateGetPositionNed_f()->y;
@@ -273,7 +284,7 @@ static void send_gcnet_main(struct transport_tx *trans, struct link_device *dev)
 	rates->r = -rates->r;
 
 	float az_nn_model = (control_nn[0] + BEBOP_MASS*GRAVITY_ACC)/BEBOP_MASS;
-	float az_nn_drone = ctrl.thrust_pct*1.35*GRAVITY_ACC;
+	float az_nn_drone = ctrl.thrust_pct;
 	float az_imu = -ACCEL_FLOAT_OF_BFP(imu.accel.z);
 
 	pprz_msg_send_GCNET_MAIN(
@@ -295,61 +306,6 @@ float timedifference_msec(struct timeval t_t0, struct timeval t_t1)
 {
 	return (t_t1.tv_sec - t_t0.tv_sec) * 1000.0f + (t_t1.tv_usec - t_t0.tv_usec) / 1000.0f;
 }
-
-/*
-Function: Hovering controller (altitude controller)
-NOTE: Commanded position must be negative! 
-*/
-/* 
-void hovering_ctrl(float z_cmd)
-{
-	// get current height (in NED)
-  float z_measured = stateGetPositionNed_f()->z;
-	// get current velocity (in NED)
-  float vz_measured = stateGetSpeedNed_f()->z;
-  
-	// position error
-  float zv_command = (KP_ALT *(z_cmd - z_measured));
-  
-	// bound the velocity command
-  if(zv_command < -4)
-	{
-    zv_command = -4;
-  }
-  
-  if(zv_command > 2.5)
-	{
-    zv_command = 2.5;
-  }
-
-	// velocity error 
-	z_i += (zv_command - vz_measured)/PERIODIC_FREQUENCY;
-  
-	// thrust command
-  float thrust_cmd = -KD_ALT*(zv_command - vz_measured) - z_i*KI_ALT + HOVERTHRUST/(cosf(stateGetNedToBodyEulers_f()->theta)/cosf(stateGetNedToBodyEulers_f()->phi));
-
-  if(thrust_cmd > 0.8)
-	{
-    thrust_cmd = 0.8;
-  }
-  stabilization_cmd[COMMAND_THRUST] = thrust_cmd*9125.;
-
-	struct FloatEulers cmd;
-	struct FloatQuat cmd_quat;
-
-	cmd.phi = ANGLE_BFP_OF_REAL(0.0);
-	cmd.theta = ANGLE_BFP_OF_REAL(0.0);
-	cmd.psi = ANGLE_BFP_OF_REAL(0.0);
-
-	float_quat_of_eulers(&cmd_quat, &cmd);
-
-	struct Int32Quat cmd_quat_int;
-
-	QUAT_BFP_OF_REAL(cmd_quat_int,cmd_quat);
-
-	stabilization_indi_attitude_run(cmd_quat_int, true);
-}
-*/ 
 
 /*
 Function: Guidance and Control Network Init Function
@@ -374,9 +330,9 @@ void gcnet_init(void)
 	idx_wp = 0;
 
 	// Initialize desired position and yaw angle: 
-	desired_X = 5; // desired_X_vec[0]; // 2.5
-	desired_Y = 0; // desired_Y_vec[0]; // -2
-	desired_Z = 0; // desired_Z_vec[0]; // 1
+	desired_X = 2.5; // desired_X_vec[0]; // 2.5
+	desired_Y = -2; // desired_Y_vec[0]; // -2
+	desired_Z = 1; // desired_Z_vec[0]; // 1
 	desired_psi = 0; // desired_psi_vec[0]; // 0
 }	
 
@@ -534,7 +490,7 @@ void gcnet_guidance(bool in_flight)
 		*/ 
 
 		// -- convert to throttle, in pct, sent to the drone
-		ctrl.thrust_pct = thrust_pct_before*2*(0.65/0.5);
+		ctrl.thrust_pct = thrust_pct_before*2*(nominal_throttle/0.5);
 
 		// -- convert to integer
 		int32_t thrust_int = ctrl.thrust_pct * MAX_PPRZ; // see how to transform this! 
@@ -547,7 +503,7 @@ void gcnet_guidance(bool in_flight)
 
 	}
 
-	printf("%f \t %f \t %f \t %f \t %f \t %d \t %f \t %f \t %f \t %f \t %f (x,y,z,psi,nn_time,idx_wp, imu_x, imu_y, imu_z, nominal_throttle, nominal throttle - pprz) \n", fabs(state_nn[0]), fabs(state_nn[1]), fabs(state_nn[2]), att_euler_NWU.psi*180/PI, nn_process_time, idx_wp, ACCEL_FLOAT_OF_BFP(imu.accel.x), ACCEL_FLOAT_OF_BFP(imu.accel.y), ACCEL_FLOAT_OF_BFP(imu.accel.z), nominal_throttle, GUIDANCE_V_NOMINAL_HOVER_THROTTLE);
+	// printf("%f \t %f \t %f \t %f \t %f \t %d \t %f \t %f \t %f \t %f \t %f (x,y,z,psi,nn_time,idx_wp, imu_x, imu_y, imu_z, nominal_throttle, nominal throttle - pprz) \n", fabs(state_nn[0]), fabs(state_nn[1]), fabs(state_nn[2]), att_euler_NWU.psi*180/PI, nn_process_time, idx_wp, ACCEL_FLOAT_OF_BFP(imu.accel.x), ACCEL_FLOAT_OF_BFP(imu.accel.y), ACCEL_FLOAT_OF_BFP(imu.accel.z), nominal_throttle, GUIDANCE_V_NOMINAL_HOVER_THROTTLE);
 	
 	// if drone within the waypoint's neighbourhood:
 	if ((fabs(state_nn[0]) < tol_x) && (fabs(state_nn[1]) < tol_y) && (fabs(state_nn[2]) < tol_z))
@@ -630,6 +586,7 @@ void acceleration_z_controller(float desired_az)
 	accel_ned_filt.y = accel_ned_filt_y.o[0];
 	accel_ned_filt.z = accel_ned_filt_z.o[0] - GRAVITY_ACC;
 
+	// transform from NED to Body: 
 	float_rmat_of_eulers_321(&R_NED_2_BODY, &att_euler_NED);
 
 	float_rmat_vmult(&acc_body_filt, &R_NED_2_BODY, &accel_ned_filt);
@@ -645,7 +602,7 @@ void acceleration_z_controller(float desired_az)
 	debug_az_PID.filtered_az = filtered_az;
 	// -------------
 
-	// transform from NED to Body: 
+	// transform from NED to Body - using simplication of psi ~ 0: 
 	// float filtered_az = (accel_ned_filt.o[0] - GRAVITY_ACC)/cosf(stateGetNedToBodyEulers_f()->theta)/cosf(stateGetNedToBodyEulers_f()->phi);
 
 	// get the acceleration error:
@@ -686,6 +643,127 @@ void acceleration_z_controller(float desired_az)
 	*/ 
 }
 
+/*
+Function: z (vertical) PI controller 
+NOTE: z should be negative
+*/
+void z_PID_ctrl(float pos_cmd)
+{
+
+	static float pos_error_int = 0;
+
+	// get current height (in NED)
+  float z_m = stateGetPositionNed_f()->z;
+	// get current velocity (in NED)
+  float vz_m = stateGetSpeedNed_f()->z;
+  
+	// P gain
+  float pos_error = pos_cmd - z_m;
+  
+	// I gain
+	pos_error_int += pos_error / PERIODIC_FREQUENCY;
+
+	Bound(pos_error_int, -0.1, 0.1)
+  
+	// thrust command
+  float thrust_cmd = - KP_ALT * pos_error - KI_ALT * pos_error_int - KD_ALT * (0 - vz_m) + HOVERTHRUST/(cosf(stateGetNedToBodyEulers_f()->theta)*cosf(stateGetNedToBodyEulers_f()->phi));
+
+  if(thrust_cmd > 0.8)
+	{
+    thrust_cmd = 0.8;
+  }
+	
+  stabilization_cmd[COMMAND_THRUST] = thrust_cmd * MAX_PPRZ; // 9125.0;
+
+	debug_PID_hv.z_cmd = pos_cmd;
+	debug_PID_hv.z_error_int = pos_error_int;
+	debug_PID_hv.z_error = pos_error;
+	debug_PID_hv.thrust_cmd = thrust_cmd;
+} 
+
+/*
+Function: x-y (horizontal) P control
+*/ 
+void xy_PID_ctrl(float x_cmd, float y_cmd)
+{
+	// -- POSITION LOOP 
+	// get current position
+	float x_curr = stateGetPositionNed_f()->x;
+	float y_curr = stateGetPositionNed_f()->y;
+
+	// my friends, this computation is done in NED 
+	float error_x = x_cmd - x_curr;
+	float error_y = y_cmd - y_curr;
+
+	// cosine and sine of psi
+	float psi = stateGetNedToBodyEulers_f()->psi; 
+	float cpsi = cosf(psi);
+	float spsi = sinf(psi);
+
+	// velocity command
+	float vx_cmd = KP_POS_X*error_x;
+	float vy_cmd = KP_POS_Y*error_y;
+
+	// transform position errors to velocity frame (rotation in psi) -- error is the desired speed - position_error * 1 (where 1 is the gain)
+	float vx_cmd_vel_frame = cpsi*vx_cmd + spsi*vy_cmd; 
+	float vy_cmd_vel_frame = -spsi*vx_cmd + cpsi*vy_cmd;
+
+	// bound the error:
+	Bound(vx_cmd_vel_frame,-CTRL_MAX_SPEED,CTRL_MAX_SPEED);
+	Bound(vy_cmd_vel_frame,-CTRL_MAX_SPEED,CTRL_MAX_SPEED);
+
+	// -- VELOCITY LOOP
+	// get current velocity
+	float vx_curr = stateGetSpeedNed_f()->x;
+	float vy_curr = stateGetSpeedNed_f()->y; 
+
+	// transform current velocity to the velocity frame (same rotation in psi):
+	float vx_curr_vel_frame = cpsi*vx_curr + spsi*vy_curr; 
+	float vy_curr_vel_frame = -spsi*vx_curr + cpsi*vy_curr;
+
+	// get the attitude commands (position controller) -> NOTE: X affects theta and Y affects roll
+	float phi_cmd = KP_VEL_Y*(vy_cmd_vel_frame - vy_curr_vel_frame);
+	float theta_cmd = KP_VEL_X*(vx_cmd_vel_frame - vx_curr_vel_frame);
+
+	// bound the attitude commands:
+	Bound(phi_cmd,-CTRL_MAX_ROLL,CTRL_MAX_ROLL);
+	Bound(theta_cmd,-CTRL_MAX_PITCH,CTRL_MAX_PITCH);
+	
+	struct FloatEulers cmd;
+	struct FloatQuat cmd_quat;
+
+	cmd.phi = 0.0;
+	cmd.theta = 0.0;
+	cmd.psi = psi; // we want psi to be zero too
+
+	float_quat_of_eulers(&cmd_quat, &cmd);
+
+	struct Int32Quat cmd_quat_int;
+
+	QUAT_BFP_OF_REAL(cmd_quat_int,cmd_quat);
+
+	/* 
+	stabilization_attitude_set_rpy_setpoint_i(&cmd);
+  stabilization_attitude_run(true);
+	*/ 
+
+	stabilization_indi_attitude_run(cmd_quat_int, true);
+
+
+	debug_PID_hv.x_cmd = x_cmd;
+	debug_PID_hv.y_cmd = y_cmd;
+	debug_PID_hv.error_x = error_x;
+	debug_PID_hv.error_y = error_y;
+	debug_PID_hv.error_x_vel_frame = vx_cmd_vel_frame;
+	debug_PID_hv.error_y_vel_frame = vx_cmd_vel_frame;
+	debug_PID_hv.vx_curr_vel_frame = vx_curr_vel_frame;
+	debug_PID_hv.vy_curr_vel_frame = vy_curr_vel_frame;
+	debug_PID_hv.phi_cmd = cmd.phi;
+	debug_PID_hv.theta_cmd = cmd.theta;
+	debug_PID_hv.psi_cmd = cmd.psi;
+}
+
+
 /**
  * Implement own horizontal loop functions 
  * NOTE: In this case, the thrust output of the network is also computed here 
@@ -706,7 +784,7 @@ void guidance_h_module_enter(void)
 
 	// initialize certain variables to execute the gcnet 
 	gcnet_init();
-	// guidance_v_init();
+	guidance_v_init(); // this lets use the GUIDANCE_V_NOMINAL_HOVER_THROTTLE variable
 }
 
 // Read the RC values 
@@ -725,27 +803,55 @@ void guidance_h_module_run(bool in_flight)
   } 
   else 
 	{
+		// float des_x = 2.0;
+		// float des_y = 2.0;
+		// float des_z = 1.0;
+
 		/* 
+		// -- transform from OT to the NED frame (the frames are the same) 
+		float_rmat_transp_vmult(&pos_NED, &R_OT_2_NED, &pos_OT);
+
+		// -- transform to the NWU (North-West-Up = x-y-z) frame 
+		float_rmat_transp_vmult(&pos_NWU, &R_NED_2_NWU, &pos_NED);
+		*/ 
+
+		// 1 - PID that leads drone to desired initial point: 
+		// xy_PID_ctrl(des_x,des_y);
+		// z_PID_ctrl(-des_z);
+
+		// 2 - After reaching the desired point, estimate norminal thrust for 5-10 seconds: 
+
+		// 3 - Activate the GCNET mode:
+
+		/*
 		// get the nominal of the drone to estimate the nominal thrust:  
   	if (first_run) {
     	start_time = get_sys_time_float();
     	nominal_throttle = (float)stabilization_cmd[COMMAND_THRUST] / MAX_PPRZ;
     	first_run = false;
-  	}
-		*/ 
+  	}*/
+
   	// Let the vehicle hover 
   	// if (get_sys_time_float() - start_time < 5.0f) 
 		// {
 		// hovering_ctrl(-1.0);
     	// return;
   	// }
+		
 		/*use neural network to guide drone */
 		gcnet_guidance(in_flight);
+
 		/* 
-		printf("==============================================\n");		
-		printf("%f \t %f \t %f (wp_x,wp_y,wp_z) \n",); 		
-		printf("==============================================\n");		
-		*/ 
+		if(get_sys_time_float() - start_time < 2)
+		{
+			printf("Time = %f \n", get_sys_time_float() - start_time);
+			printf("I am hovering\n");
+		}
+		else
+		{
+			printf("Network time, baby\n");
+		*/
+		
 	}
 }
 

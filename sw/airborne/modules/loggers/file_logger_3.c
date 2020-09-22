@@ -44,7 +44,7 @@
 #endif
 
 // Add neural network library 
-#include "modules/gcnet/gcnet_main.h"
+// #include "modules/gcnet/gcnet_main.h"
 
 // other libraries for logging (lower-level controls and sensing)
 #include "firmwares/rotorcraft/stabilization/stabilization_indi_simple.h" // -- INDI
@@ -78,56 +78,11 @@ static void file_logger_write_header(FILE *file) {
   */ 
   fprintf(file, "pos_x_NED,pos_y_NED,pos_z_NED,"); 
   fprintf(file, "vel_x_NED,vel_y_NED,vel_z_NED,"); 
-  // fprintf(file, "acc_x_NED,acc_y_NED,acc_z_NED,");
+  fprintf(file, "acc_x_NED,acc_y_NED,acc_z_NED,");
   fprintf(file, "att_phi_NED,att_theta_NED,att_psi_NED,");
-
-  /* 
   fprintf(file, "att_qi_NED,att_qx_NED,att_qy_NED,att_qz_NED,");
   fprintf(file, "rate_p_NED,rate_q_NED,rate_r_NED,");
-  */
 
-  // > Neural Network file - Logs: [MY FILE]
-  // -- post-processing time: 
-  fprintf(file, "NN_pp_time,");
-  // -- body state variables:
-  // -- body state variables - OT:
-  fprintf(file, "pos_x_OT,pos_y_OT,pos_z_OT,");
-  fprintf(file, "vel_x_OT,vel_y_OT,vel_z_OT,");
-  fprintf(file, "acc_x_NED,acc_y_NED,acc_z_NED,");
-  // -- body state variables - NED:
-  fprintf(file, "pos_x_NED_v2,pos_y_NED_v2,pos_z_NED_v2,");
-  fprintf(file, "vel_x_NED_v2,vel_y_NED_v2,vel_z_NED_v2,");
-  fprintf(file, "att_phi_NED_v2,att_theta_NED_v2,att_psi_NED_v2,");
-  // -- body state variables - NWU:
-  fprintf(file, "pos_x_NWU,pos_y_NWU,pos_z_NWU,");
-  fprintf(file, "vel_x_NWU,vel_y_NWU,vel_z_NWU,");
-  fprintf(file, "att_phi_NWU,att_theta_NWU,att_psi_NWU,");
-  fprintf(file, "att_qi_NWU,att_qx_NWU,att_qy_NWU,att_qz_NWU,");
-  fprintf(file, "rate_p_NWU,rate_q_NWU,rate_r_NWU,");
-  // -- desired position and yaw angle: 
-  fprintf(file, "des_pos_x_NWU,des_pos_y_NWU,des_pos_z_NWU,des_pos_psi_NWU,");
-  // -- delta position - ENU and Network (intermediate) frames
-  fprintf(file, "d_pos_x_NWU,d_pos_y_NWU,");
-  fprintf(file, "d_pos_x_net,d_pos_y_net,");
-  // -- velocity and yaw angle in Network frame
-  fprintf(file, "v_x_net,v_y_net,yaw_net,");
-  // -- Neural Network - inputs (states):
-  fprintf(file, "x_nn,y_nn,z_nn,v_x_nn,v_y_nn,v_z_nn,qi_nn,qx_nn,qy_nn,qz_nn,");
-  // -- Neural Network - outputs (controls):
-  fprintf(file, "T_nn,");
-  fprintf(file, "p_nn,q_nn,r_nn,");
-  fprintf(file, "T_pct,");
-  fprintf(file, "tol_x,tol_y,tol_z,");
-  fprintf(file, "t_1,t_2,t_3,t_4,"); 
-  
-  // Lower level control - PID controller: 
-  fprintf(file, "acc_ned_z,acc_ned_filt_x,acc_ned_filt_y,acc_ned_filt_z,desired_az,filtered_az,error_az,integrator_error,derivative_error,");
-  
-  // Lower level controls - PID for hovering: 
-  // -- altitude controller
-  fprintf(file, "z_cmd,z_error_int,z_error,thrust_cmd,");
-  // -- horizontal controller
-	fprintf(file, "x_cmd,y_cmd,error_x,error_y,error_x_vel_frame,error_y_vel_frame,vx_curr_vel_frame,vy_curr_vel_frame,phi_cmd,theta_cmd,psi_cmd,");
   
   /* 
   // > Lower level control - INDI controller: 
@@ -173,73 +128,20 @@ static void file_logger_write_row(FILE *file) {
   /* 
   // > Logs from body - In NED frame:
   */ 
- 
   struct NedCoor_f *pos = stateGetPositionNed_f(); 
   struct NedCoor_f *vel = stateGetSpeedNed_f(); 
-  // struct NedCoor_f *acc = stateGetAccelNed_f();
+  struct NedCoor_f *acc = stateGetAccelNed_f();
   struct FloatEulers *att = stateGetNedToBodyEulers_f();
-  
-  /* 
   struct FloatQuat *att_q = stateGetNedToBodyQuat_f();
-  */
-
   struct FloatRates *rates = stateGetBodyRates_f();   
+
   fprintf(file, "%f,%f,%f,", pos->x, pos->y, pos->z);
   fprintf(file, "%f,%f,%f,", vel->x, vel->y, vel->z);
-  // fprintf(file, "%f,%f,%f,", acc->x, acc->y, acc->z);
-  fprintf(file, "%f,%f,%f,", att->phi, att->theta, att->psi); 
-  /* 
-  fprintf(file, "%f,%f,%f,%f,", att_q->qi, att_q->qx, att_q->qy, att_q->qz); 
-  fprintf(file, "%f,%f,%f,", rates->p, rates->q, rates->r); 
-  */ 
-
-
-  struct NedCoor_f *acc = stateGetAccelNed_f();
-
-  // > Neural Network file - Logs: [MY FILE]
-  // -- post-processing time: 
-  fprintf(file, "%f,", nn_process_time);
-  // -- body state variables - OT:
-  fprintf(file, "%f,%f,%f,", pos_OT.x, pos_OT.y, pos_OT.z);
-  fprintf(file, "%f,%f,%f,", vel_OT.x, vel_OT.y, vel_OT.z); 
   fprintf(file, "%f,%f,%f,", acc->x, acc->y, acc->z);
-  // -- body state variables - NED:
-  fprintf(file, "%f,%f,%f,", pos_NED.x, pos_NED.y, pos_NED.z);
-  fprintf(file, "%f,%f,%f,", vel_NED.x, vel_NED.y, vel_NED.z);
-  fprintf(file, "%f,%f,%f,", att_euler_NED.phi, att_euler_NED.theta, att_euler_NED.psi); 
-  // -- body state variables - NWU:
-  fprintf(file, "%f,%f,%f,", pos_NWU.x, pos_NWU.y, pos_NWU.z);
-  fprintf(file, "%f,%f,%f,", vel_NWU.x, vel_NWU.y, vel_NWU.z);
-  fprintf(file, "%f,%f,%f,", att_euler_NWU.phi, att_euler_NWU.theta, att_euler_NWU.psi); 
-  fprintf(file, "%f,%f,%f,%f,", att_quat.qi, att_quat.qx, att_quat.qy, att_quat.qz); 
-  fprintf(file, "%f,%f,%f,", rates->p, -rates->q, -rates->r); 
-  // -- desired position and yaw angle: 
-  fprintf(file, "%f,%f,%f,%f,", desired_X, desired_Y, desired_Z, desired_psi); 
-  // -- delta position - NWU and Network (intermediate) frames
-  fprintf(file, "%f,%f,", delta_pos_NWU.x, delta_pos_NWU.y); 
-  fprintf(file, "%f,%f,", delta_pos_net.x, delta_pos_net.y); 
-  // -- velocity and yaw angle in Network frame
-  fprintf(file, "%f,%f,%f,", vel_net.x, vel_net.y, psi_net);
-  // -- Neural Network - inputs (states):
-  fprintf(file, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,", state_nn[0], state_nn[1], state_nn[2], state_nn[3], state_nn[4], state_nn[5], state_nn[6], state_nn[7], state_nn[8], state_nn[9]);
-  // -- Neural Network - outputs (controls):
-  fprintf(file, "%f,", control_nn[0]);
-  fprintf(file, "%f,%f,%f,", control_nn[1], control_nn[2], control_nn[3]);
-  // -- Thrust percentage: 
-  fprintf(file, "%f,", ctrl.thrust_pct);
-  fprintf(file, "%f,%f,%f,", tol_x, tol_y, tol_z);
-  // -- Time when reaches the waypoint (within the tolerances):
-  fprintf(file, "%f,%f,%f,%f,", t_wp_entry[0], t_wp_entry[1], t_wp_entry[2], t_wp_entry[3]); 
+  fprintf(file, "%f,%f,%f,", att->phi, att->theta, att->psi);  
+  fprintf(file, "%f,%f,%f,%f,", att_q->qi, att_q->qx, att_q->qy, att_q->qz); 
+  fprintf(file, "%f,%f,%f,", rates->p, rates->q, rates->r);  
 
-  // Lower level control - PID controller: 
-  fprintf(file, "%f,%f,%f,%f,%f,%f,%f,%f,%f,", debug_az_PID.acc_ned_z, debug_az_PID.acc_ned_filt_x, debug_az_PID.acc_ned_filt_y, debug_az_PID.acc_ned_filt_z, debug_az_PID.desired_az, debug_az_PID.filtered_az, debug_az_PID.error_az, debug_az_PID.integrator_error, debug_az_PID.derivative_error);
-  
-  // Lower level controls - PID for hovering: 
-  // -- altitude controller
-  fprintf(file, "%f,%f,%f,%f,", debug_PID_hv.z_cmd, debug_PID_hv.z_error_int, debug_PID_hv.z_error, debug_PID_hv.thrust_cmd);
-  // -- horizontal controller
-	fprintf(file, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,", debug_PID_hv.x_cmd, debug_PID_hv.y_cmd, debug_PID_hv.error_x, debug_PID_hv.error_y, debug_PID_hv.error_x_vel_frame, debug_PID_hv.error_y_vel_frame, debug_PID_hv.vx_curr_vel_frame, debug_PID_hv.vy_curr_vel_frame, debug_PID_hv.phi_cmd, debug_PID_hv.theta_cmd, debug_PID_hv.psi_cmd);
-  
   /*
   // > Lower level control - INDI controller: 
   fprintf(file, "%f,%f,%f,", indi.angular_accel_ref.p, indi.angular_accel_ref.q, indi.angular_accel_ref.r); // [ADD MORE VARIABLES LATER]
