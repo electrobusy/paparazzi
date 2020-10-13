@@ -172,7 +172,7 @@
     </block>
     <block name="Set nav">
         <call_once fun="setNav()"/>
-        <stay wp="WP1"/> <!-- Change this to choose initial position ! -->
+        <stay wp="WP2"/> <!-- Change this to choose initial position ! -->
     </block>    
     <!-- === MY BLOCKS === -->
     <block name="land here" strip_button="land here" strip_icon="land-right.png">
