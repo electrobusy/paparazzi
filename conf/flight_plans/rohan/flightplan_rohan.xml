@@ -28,7 +28,10 @@
     <waypoint name="Origin" x="0" y="0" alt="1."/>
 
     <!-- For the waypoint tracking scenario -->
-    <waypoint name="WP1" x="-3.3" y="2.5" alt="1."/>
+    <waypoint name="WP1" x="3" y="-3" alt="1."/>
+
+    <!-- Starting point for Longitudinal/Diagonal/Lateral flights ! -->
+    <waypoint name="WP2" x="2.5" y="-2.5" alt="1."/> 
 
     <!-- Important for the exceptions -->
     <waypoint name="CLIMB" x="1.9" y="1.0"/>
@@ -125,7 +128,7 @@
     </block>
     <block name="Takeoff" strip_button="Takeoff" strip_icon="takeoff.png">
         <exception cond="GetPosAlt() > 0.5" deroute="Standby"/>
-        <stay climb="nav_climb_vspeed" vmode="climb" wp="HOME"/>
+        <stay climb="nav_climb_vspeed" vmode="climb" wp="CLIMB"/>
     </block>
     <block name="Standby" strip_button="Standby" strip_icon="home.png">
         <stay wp="STDBY"/>
@@ -142,19 +145,34 @@
     <block name="GoToWP1">
       <go wp="WP1"/>
       <stay wp="WP1"/>
+      <call_once fun="nav_set_heading_deg(-90)"/>
+    </block>
+    <block name="GoToWP2">
+      <go wp="WP2"/>
+      <stay wp="WP2"/>
+      <call_once fun="nav_set_heading_deg(0)"/>
+    </block>
+    <block name="GoToOrigin">
+      <go wp="Origin"/>
+      <stay wp="Origin"/>
+      <call_once fun="nav_set_heading_deg(0)"/>
     </block>
     <!-- Align to ensure that after landing, we don't need to reposition it manually -->
     <block name="Align right">
-        <call_once fun="nav_set_heading_deg(90)"/>
+        <call_once fun="nav_set_heading_deg(0)"/>
+        <return/>
+    </block>
+    <block name="Align 90 - NWU">
+        <call_once fun="nav_set_heading_deg(-90)"/>
         <return/>
     </block>
     <block name="Set module">
         <call_once fun="setModule()"/>
-        <stay wp="WP1"/> <!-- This will not work, because we are not in NAV mode -->
+        <stay wp="WP2"/> <!-- This will not work, because we are not in NAV mode -->
     </block>
     <block name="Set nav">
         <call_once fun="setNav()"/>
-        <stay wp="WP1"/>
+        <stay wp="WP1"/> <!-- Change this to choose initial position ! -->
     </block>    
     <!-- === MY BLOCKS === -->
     <block name="land here" strip_button="land here" strip_icon="land-right.png">

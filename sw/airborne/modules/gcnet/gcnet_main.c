@@ -122,7 +122,7 @@ struct FloatRMat R_NED_2_BODY;
 
 float thrust_effectiveness = 0.05f; // transfer function from G to thrust percentage
 float error_integrator = 0.f;
-float nominal_throttle = GUIDANCE_V_NOMINAL_HOVER_THROTTLE; // 0.52
+float nominal_throttle = 0.52; // GUIDANCE_V_NOMINAL_HOVER_THROTTLE; // 0.52
 
 /* ---
 For hover controller:
@@ -181,19 +181,19 @@ struct FloatQuat att_quat;
 
 // desired position and yaw angle [-- MAKE SURE THAT THIS CAN BE SET FROM THE FLIGHT PLAN]
 // --> vectors (later we will obtain the points from the flightplan -- still needs improvement)
+ 
+float desired_X_vec[4] = {-2.5, 2.5, 2.5, -2.5};
+float desired_Y_vec[4] = {2.5, 2.5, -2.5, -2.5};
+float desired_Z_vec[4] = {1, 2, 2, 1};
+float desired_psi_vec[4] = {PI/2, 0, -PI/2, -180*PI/180};
 
 /* 
-float desired_X_vec[4] = {-2.5, 1.4, 1.4, -2.5};
-float desired_Y_vec[4] = {2.7, 2.7, -1.8, -1.8};
-float desired_Z_vec[4] = {1, 2, 1, 1};
-float desired_psi_vec[4] = {PI/2, 0, -PI/2, -170*PI/180};
-*/ 
-
 // -- simulation 
 float desired_X_vec[4] = {0, 6, 7, 1};
 float desired_Y_vec[4] = {5, 6, 1, 0};
 float desired_Z_vec[4] = {1, 2, 1, 1};
-float desired_psi_vec[4] = {PI/2, 0, -PI/2, -178*PI/180};
+float desired_psi_vec[4] = {PI/2, 0, -PI/2, -180*PI/180};
+*/ 
 
 // times at which the drone enters in the waypoints
 float t_wp_entry[4] = {0, 0, 0, 0};
@@ -206,9 +206,6 @@ float desired_X;
 float desired_Y; 
 float desired_Z; 
 float desired_psi;
-
-// Mask to activate zero-end network:
-bool zero_end_net = true;
 
 // control inputs (from RC or NN): 
 struct ctrl_struct ctrl;
@@ -223,9 +220,12 @@ struct debug_PID_xyz debug_PID_hv;
 // define tolerances (later when you reach final position)
 bool mask = true;
 bool mask_last_waypoint = false;
-float tol_x = 0.2;
-float tol_y = 0.2;
-float tol_z = 0.1;
+float tol_x = 0.8;
+float tol_y = 0.8;
+float tol_z = 0.3;
+
+// Mask to activate zero-end network:
+bool zero_end_net;
 
 bool first_run = true;
 
@@ -283,18 +283,20 @@ static void send_gcnet_main(struct transport_tx *trans, struct link_device *dev)
 	rates->q = -rates->q;
 	rates->r = -rates->r;
 
+	struct NedCoor_f *accel = stateGetAccelNed_f();
+
 	float az_nn_model = (control_nn[0] + BEBOP_MASS*GRAVITY_ACC)/BEBOP_MASS;
 	float az_nn_drone = ctrl.thrust_pct;
 	float az_imu = -ACCEL_FLOAT_OF_BFP(imu.accel.z);
 
 	pprz_msg_send_GCNET_MAIN(
 		trans, dev, AC_ID, 
-		&(pos_NWU_v2.x), &(pos_NWU_v2.y), &(pos_NWU_v2.z),
+		&(pos_OT_v2.x), &(pos_OT_v2.y), &(pos_OT_v2.z),
     &(vel_NWU_v2.x), &(vel_NWU_v2.y), &(vel_NWU_v2.z),
 		&(att_euler_NWU_deg.phi), &(att_euler_NWU_deg.theta), &(att_euler_NWU_deg.psi), 
 		&(rates->p), &(rates->q), &(rates->r),
 		&(control_nn[1]), &(control_nn[2]), &(control_nn[3]),
-		&(az_nn_model), &(ctrl.thrust_pct), &(az_imu),
+		&(accel->z), &(ctrl.thrust_pct), &(az_imu),
 		&(state.ned_origin_f.hmsl)); 
     // &autopilot.mode, &record);
 }
@@ -326,14 +328,22 @@ void gcnet_init(void)
 		init_butterworth_2_low_pass(&accel_ned_filt_z, tau, sample_time, 0.0);
 	}
 
+	// Entering the neighbourhood area: 
+	t_wp_entry[0] = 0;
+	t_wp_entry[1] = 0;
+	t_wp_entry[2] = 0;
+	t_wp_entry[3] = 0;
+
 	// idx_wp initialization:
 	idx_wp = 0;
 
 	// Initialize desired position and yaw angle: 
-	desired_X = 2.5; // desired_X_vec[0]; // 2.5
-	desired_Y = -2; // desired_Y_vec[0]; // -2
-	desired_Z = 1; // desired_Z_vec[0]; // 1
-	desired_psi = 0; // desired_psi_vec[0]; // 0
+	desired_X = -2.5;
+	desired_Y = 2.5;
+	desired_Z = 1;
+	desired_psi = 0;
+
+	zero_end_net = true;
 }	
 
 /*
@@ -507,23 +517,25 @@ void gcnet_guidance(bool in_flight)
 	
 	// if drone within the waypoint's neighbourhood:
 	if ((fabs(state_nn[0]) < tol_x) && (fabs(state_nn[1]) < tol_y) && (fabs(state_nn[2]) < tol_z))
-	{
-		/* 
+	{ 
+		/*
 		if(mask_last_waypoint)
 		{
 			t_wp_entry[idx_wp] = get_sys_time_float();
 			mask_last_waypoint = false;
 			idx_wp = 4;
 		}
+		*/
 		
 		// if last waypoint is activated (considering that we have 4 waypoints) 
+		/* 
 		if(idx_wp == 3)
 		{  
 			zero_end_net = true; 
 			mask_last_waypoint = true;
+			*/ 
 			// idx_wp = 0; 
-
-			
+			/* 
 			if(mask) 
 			{
 				guidance_h_hover_enter();
@@ -535,8 +547,14 @@ void gcnet_guidance(bool in_flight)
 			// guidance_v_guided_mode = GUIDANCE_V_GUIDED_MODE_ZHOLD;
 			guidance_h_guided_run(in_flight);
 			guidance_v_guided_run(in_flight); */
+			 
 			printf("Hello Jelle, I am hovering badly with the net!\n"); 
-		/*	
+			if(mask)
+			{
+				t_wp_entry[0] = get_sys_time_float();
+				mask = false;
+			}	
+		/*	 
 		}
 		else // else change waypoint 
 		{
@@ -553,7 +571,8 @@ void gcnet_guidance(bool in_flight)
 				desired_Z = desired_Z_vec[idx_wp]; 
 				desired_psi = desired_psi_vec[idx_wp]; 
 			}
-		} */
+		}
+		*/
 	}
 }
 

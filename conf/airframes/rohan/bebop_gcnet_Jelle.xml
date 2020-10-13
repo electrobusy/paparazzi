@@ -125,31 +125,28 @@
   -->
   <!-- Callibration values (Jelle's drone - "TUBBD50"): -->  
   <!--
+    <define name="ACCEL_X_NEUTRAL" value="27"/>
+    <define name="ACCEL_Y_NEUTRAL" value="44"/>
+    <define name="ACCEL_Z_NEUTRAL" value="563"/>
+    <define name="ACCEL_X_SENS" value="2.4138343633888066" integer="16"/>
+    <define name="ACCEL_Y_SENS" value="2.44055875549338" integer="16"/>
+    <define name="ACCEL_Z_SENS" value="2.4126173810932" integer="16"/>
+  -->
+  <!-- Previous values -->
     <define name="ACCEL_X_NEUTRAL" value="67"/>
     <define name="ACCEL_Y_NEUTRAL" value="41"/>
     <define name="ACCEL_Z_NEUTRAL" value="583"/>
     <define name="ACCEL_X_SENS" value="2.4350337938914457" integer="16"/> 
     <define name="ACCEL_Y_SENS" value="2.4409575848327307" integer="16"/>
     <define name="ACCEL_Z_SENS" value="2.4145919508518565" integer="16"/>
-  -->
 
   <!-- Callibration values (Nishant's drone - "TUBBD54"): --> 
-    <!--
-    <define name="ACCEL_X_NEUTRAL" value="62"/>
-    <define name="ACCEL_Y_NEUTRAL" value="-5"/>
-    <define name="ACCEL_Z_NEUTRAL" value="-373"/>
-    <define name="ACCEL_X_SENS" value="2.4304219491887626" integer="16"/>
-    <define name="ACCEL_Y_SENS" value="2.4330255253837643" integer="16"/>
-    <define name="ACCEL_Z_SENS" value="2.4396268599983446" integer="16"/>
-    -->
-
-    <define name="ACCEL_X_NEUTRAL" value="62"/>
+    <!-- <define name="ACCEL_X_NEUTRAL" value="62"/>
     <define name="ACCEL_Y_NEUTRAL" value="-5"/>
     <define name="ACCEL_Z_NEUTRAL" value="-377"/>
     <define name="ACCEL_X_SENS" value="2.431560697936816" integer="16"/>
     <define name="ACCEL_Y_SENS" value="2.4327552041157694" integer="16"/>
-    <define name="ACCEL_Z_SENS" value="2.439854050817168" integer="16"/>
-
+    <define name="ACCEL_Z_SENS" value="2.439854050817168" integer="16"/> -->
   
   </section>
 
