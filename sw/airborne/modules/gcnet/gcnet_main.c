@@ -220,9 +220,9 @@ struct debug_PID_xyz debug_PID_hv;
 // define tolerances (later when you reach final position)
 bool mask = true;
 bool mask_last_waypoint = false;
-float tol_x = 0.8;
-float tol_y = 0.8;
-float tol_z = 0.3;
+float tol_x = 0.2;
+float tol_y = 0.2;
+float tol_z = 0.1;
 
 // Mask to activate zero-end network:
 bool zero_end_net;
